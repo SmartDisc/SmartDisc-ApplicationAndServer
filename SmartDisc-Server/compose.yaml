@@ -33,6 +33,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
       POSTGRES_USER: ${POSTGRES_USER:-app}
+    ports:
+      - "5432:5432"
     volumes:
       - database_data:/var/lib/postgresql/data:rw
       # you may use a bind-mounted volume instead, so that it is harder to accidentally remove the volume and lose all your data!
