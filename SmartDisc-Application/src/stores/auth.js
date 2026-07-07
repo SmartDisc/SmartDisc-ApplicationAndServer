@@ -10,7 +10,7 @@ import { isTokenExpired } from '@/utils/jwt'
 // Bearer token for a Capacitor app. We deliberately never store the password.
 const TOKEN_KEY = 'sd_auth_token'
 
-function mapAuthError(err) {
+export function mapAuthError(err) {
   if (!(err instanceof ApiError)) return 'Something went wrong. Please try again.'
   if (err.status === null) return err.message || 'Could not reach the server. Check your connection and try again.'
   if (err.status >= 500) return 'Something went wrong on our end. Please try again shortly.'
@@ -103,6 +103,14 @@ export const useAuthStore = defineStore('auth', {
 
     async signOut() {
       await this._clearSession()
+    },
+
+    async changePassword(currentPassword, newPassword) {
+      await apiFetch('/api/change-password', {
+        method: 'POST',
+        body: { currentPassword, newPassword },
+        token: this.token,
+      })
     },
 
     clearError() {

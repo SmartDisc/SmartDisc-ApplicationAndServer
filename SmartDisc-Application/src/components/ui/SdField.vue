@@ -7,6 +7,8 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   type:        { type: String, default: 'text' },
   disabled:    { type: Boolean, default: false },
+  /** Purely for viewing: input can't be focused, clicked, or edited, but looks identical to an active field. */
+  readonly:    { type: Boolean, default: false },
   error:       { type: String, default: '' },
   maxlength:   { type: Number, default: null },
   autocomplete: { type: String, default: 'off' },
@@ -41,6 +43,7 @@ function onInput(e) {
         { 'sd-field__box--placeholder': !modelValue },
         { 'sd-field__box--error': error },
         { 'sd-field__box--disabled': disabled },
+        { 'sd-field__box--readonly': readonly },
       ]"
     >
       <span v-if="$slots.icon" class="sd-field__icon">
@@ -52,6 +55,8 @@ function onInput(e) {
         :type="type"
         :placeholder="placeholder"
         :disabled="disabled"
+        :readonly="readonly"
+        :tabindex="readonly ? -1 : undefined"
         :maxlength="maxlength ?? undefined"
         :autocomplete="autocomplete"
         class="sd-field__input"
@@ -116,6 +121,9 @@ function onInput(e) {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+.sd-field__box--readonly { cursor: default; }
+.sd-field__box--readonly .sd-field__input { cursor: default; pointer-events: none; }
 
 .sd-field__icon {
   color: var(--sd-fg3);

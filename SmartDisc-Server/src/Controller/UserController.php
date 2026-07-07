@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Dto\ChangePasswordRequest;
 use App\Dto\RegistrationRequest;
 use App\Entity\User;
 use App\Repository\UserRepository;
@@ -28,6 +29,7 @@ class UserController extends AbstractController
     public function __construct(
         private readonly ValidatorInterface $validator,
         private readonly RateLimiterFactoryInterface $registrationLimiter,
+        private readonly RateLimiterFactoryInterface $changePasswordLimiter,
     ) {
     }
 
@@ -113,5 +115,60 @@ class UserController extends AbstractController
             'email' => $user->getEmail(),
             'name' => $user->getName(),
         ]);
+    }
+
+    #[Route('/change-password', name: 'app_change_password', methods: ['POST'])]
+    public function changePassword(
+        Request $request,
+        #[CurrentUser] User $user,
+        EntityManagerInterface $entityManager,
+        UserPasswordHasherInterface $passwordHasher,
+    ): JsonResponse {
+        $limit = $this->changePasswordLimiter->create($user->getUserIdentifier())->consume();
+        if (!$limit->isAccepted()) {
+            $retryAfterSeconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
+
+            return $this->json(
+                ['error' => 'Too many attempts. Please try again later.'],
+                Response::HTTP_TOO_MANY_REQUESTS,
+                ['Retry-After' => (string) $retryAfterSeconds],
+            );
+        }
+
+        try {
+            $data = $request->toArray();
+        } catch (JsonException) {
+            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!is_string($data['currentPassword'] ?? null) || !is_string($data['newPassword'] ?? null)) {
+            return $this->json(['error' => 'currentPassword and newPassword are required strings.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!$passwordHasher->isPasswordValid($user, $data['currentPassword'])) {
+            return $this->json(['errors' => ['currentPassword' => 'Current password is incorrect.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $changeRequest = new ChangePasswordRequest();
+        $changeRequest->newPassword = $data['newPassword'];
+
+        $violations = $this->validator->validate($changeRequest);
+        if (count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $violation) {
+                $errors[$violation->getPropertyPath()] = $violation->getMessage();
+            }
+
+            return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if ($passwordHasher->isPasswordValid($user, $changeRequest->newPassword)) {
+            return $this->json(['errors' => ['newPassword' => 'New password must be different from the current password.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $user->setPassword($passwordHasher->hashPassword($user, $changeRequest->newPassword));
+        $entityManager->flush();
+
+        return $this->json(['message' => 'Password updated successfully.']);
     }
 }

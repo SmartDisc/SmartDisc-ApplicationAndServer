@@ -32,7 +32,7 @@ async function handleSubmit() {
   if (!validate()) return
   try {
     await signUp(form.name, form.email, form.password)
-    router.push('/onboarding')
+    router.push('/discs')
   } catch {
     // authError is populated by useAuth
   }

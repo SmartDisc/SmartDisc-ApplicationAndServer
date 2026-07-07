@@ -23,8 +23,8 @@ function isActive(tab) {
       :to="tab.to"
       :class="['tabbar__item', { 'tabbar__item--on': isActive(tab) }]"
     >
-      <component :is="tab.icon" :size="17" :stroke-width="isActive(tab) ? 2 : 1.75" />
-      <span>{{ tab.label }}</span>
+      <component :is="tab.icon" :size="17" :stroke-width="isActive(tab) ? 2 : 1.75" class="tabbar__icon" />
+      <span class="tabbar__label">{{ tab.label }}</span>
     </RouterLink>
   </nav>
 </template>
@@ -46,6 +46,7 @@ function isActive(tab) {
 
 .tabbar__item {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,6 +58,15 @@ function isActive(tab) {
   color: var(--sd-fg2);
   padding: 11px 8px;
   text-decoration: none;
+}
+
+.tabbar__icon { flex-shrink: 0; }
+
+.tabbar__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tabbar__item--on {

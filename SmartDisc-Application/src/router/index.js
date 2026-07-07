@@ -43,14 +43,6 @@ const routes = [
     meta: { guestOnly: true },
   },
 
-  // ── Onboarding (authenticated, one-time after sign-up) ─────────────────
-  {
-    path: '/onboarding',
-    name: 'onboarding',
-    component: () => import('@/views/auth/OnboardingView.vue'),
-    meta: { requiresAuth: true },
-  },
-
   // ── My Discs ───────────────────────────────────────────────────────────
   {
     path: '/discs',

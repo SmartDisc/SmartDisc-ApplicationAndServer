@@ -8,11 +8,12 @@ import SdAvatar from '@/components/ui/SdAvatar.vue'
 import { SdBtn, SdField, SdChip, SdToggle, SdBottomSheet, SdList, SdListRow, SdSectionLabel } from '@/components/ui'
 import SdPasswordHint from '@/components/auth/SdPasswordHint.vue'
 import { useAuth } from '@/composables/useAuth'
+import { mapAuthError } from '@/stores/auth'
 import { sanitizeName, sanitizeEmail, sanitizePassword } from '@/utils/sanitize'
 import { required, password as validatePassword } from '@/utils/validate'
 
 const router = useRouter()
-const { user } = useAuth()
+const { user, changePassword } = useAuth()
 
 const name   = ref(user?.value?.name  ?? 'Alex Rivera')
 const email  = ref(user?.value?.email ?? 'alex@smartdisc.io')
@@ -48,9 +49,14 @@ async function handlePasswordChange() {
   }
   pwLoading.value = true
   pwError.value   = ''
-  await new Promise(r => setTimeout(r, 1000))
-  pwLoading.value = false
-  passwordSheet.value = false
+  try {
+    await changePassword(currentPw.value, newPw.value)
+    passwordSheet.value = false
+  } catch (err) {
+    pwError.value = mapAuthError(err)
+  } finally {
+    pwLoading.value = false
+  }
 }
 </script>
 
@@ -73,46 +79,22 @@ async function handlePasswordChange() {
       <!-- Profile fields -->
       <SdSectionLabel>Profile</SdSectionLabel>
       <div class="form-stack">
-        <SdField v-model="name" label="Full name" :sanitize="sanitizeName" :maxlength="100">
+        <SdField v-model="name" label="Full name" :sanitize="sanitizeName" :maxlength="100" readonly>
           <template #icon><User :size="18" :stroke-width="1.75" /></template>
         </SdField>
-        <SdField v-model="email" label="Email" type="email" :sanitize="sanitizeEmail" :maxlength="254">
+        <SdField v-model="email" label="Email" type="email" :sanitize="sanitizeEmail" :maxlength="254" readonly>
           <template #icon><Mail :size="18" :stroke-width="1.75" /></template>
         </SdField>
       </div>
 
       <!-- Password -->
       <SdSectionLabel>Password</SdSectionLabel>
-      <SdList>
+      <SdList class="password-list">
         <SdListRow tappable title="Change password" subtitle="Last changed 3 months ago" @click="openPasswordSheet">
           <template #icon><KeyRound :size="18" style="color: var(--sd-ink);" :stroke-width="1.75" /></template>
           <template #trailing><ChevronRight :size="16" style="color: var(--sd-fg3);" /></template>
         </SdListRow>
-        <SdListRow title="Sign in with Face ID" subtitle="Unlock SmartDisc with biometrics">
-          <template #icon><Smartphone :size="18" style="color: var(--sd-ink);" :stroke-width="1.75" /></template>
-          <template #trailing><SdToggle v-model="faceId" /></template>
-        </SdListRow>
       </SdList>
-
-      <!-- Sessions -->
-      <SdSectionLabel>Active sessions</SdSectionLabel>
-      <SdList>
-        <SdListRow title="iPhone 15 · this device" subtitle="Berlin · active now">
-          <template #icon><Smartphone :size="18" style="color: var(--sd-ink);" :stroke-width="1.75" /></template>
-          <template #trailing><SdChip tone="gold">Current</SdChip></template>
-        </SdListRow>
-        <SdListRow title="MacBook Pro · Safari" subtitle="Berlin · 2 days ago">
-          <template #icon><Monitor :size="18" style="color: var(--sd-ink);" :stroke-width="1.75" /></template>
-          <template #trailing>
-            <button class="icon-x"><X :size="16" style="color: var(--sd-fg3);" /></button>
-          </template>
-        </SdListRow>
-      </SdList>
-
-      <SdBtn variant="ghost" size="md" block style="margin-top: 4px;">
-        <template #icon-left><LogOut :size="16" /></template>
-        Sign out everywhere else
-      </SdBtn>
 
       <!-- Delete account -->
       <SdBtn variant="ghost" size="md" block class="danger-btn">
@@ -205,6 +187,8 @@ async function handlePasswordChange() {
 }
 
 .form-stack { display: flex; flex-direction: column; gap: 12px; }
+
+.password-list { box-shadow: none; }
 
 .icon-x {
   background: none;

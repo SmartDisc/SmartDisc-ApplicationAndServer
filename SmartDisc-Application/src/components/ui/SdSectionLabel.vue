@@ -14,6 +14,6 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--sd-azure);
-  margin: 6px 0 0;
+  margin: 6px 0 10px;
 }
 </style>
