@@ -1,0 +1,163 @@
+/* SmartDisc — Design Tokens
+   Brand: Roc Grotesk (→ Space Grotesk) + Minerva Modern (→ Spectral)
+   Surface system: Apple "Liquid Glass" (frosted translucent panels) */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+:root {
+  /* Brand core palette */
+  --sd-paper:  #f2eae2;
+  --sd-ink:    #102a57;
+  --sd-azure:  #6f93b5;
+  --sd-mist:   #b4bfc9;
+
+  /* Gold */
+  --sd-gold-100: #f0e3c0;
+  --sd-gold-200: #e2cb97;
+  --sd-gold-300: #dec38c;
+  --sd-gold-400: #cfb276;
+  --sd-gold-500: #b8924f;
+  --sd-gold-grad: linear-gradient(135deg, #f0e3c0 0%, #dec38c 38%, #cfb276 64%, #b8924f 100%);
+
+  /* Ink ramp */
+  --sd-ink-900: #0a1c3d;
+  --sd-ink-800: #102a57;
+  --sd-ink-700: #1d3d72;
+  --sd-ink-600: #335a8f;
+  --sd-ink-500: #4a7099;
+  --sd-ink-300: #8aa6c2;
+  --sd-ink-100: #d6e0ec;
+
+  /* Foreground / text */
+  --sd-fg1:         #0e2348;
+  --sd-fg2:         #3d5478;
+  --sd-fg3:         #6f87a6;
+  --sd-fg-on-dark:  #eef3fa;
+  --sd-fg2-on-dark: #b6c6dd;
+
+  /* Semantic */
+  --sd-success: #3f9d6d;
+  --sd-warning: #d9a441;
+  --sd-danger:  #c0584e;
+  --sd-info:    var(--sd-azure);
+
+  /* Liquid Glass surfaces */
+  --sd-glass-blur:        saturate(180%) blur(20px);
+  --sd-glass-blur-strong: saturate(200%) blur(34px);
+  --sd-glass-blur-thin:   saturate(160%) blur(10px);
+
+  --sd-glass-light-bg:     rgba(255, 255, 255, 0.55);
+  --sd-glass-light-border: rgba(255, 255, 255, 0.70);
+  --sd-glass-light-hi:     rgba(255, 255, 255, 0.90);
+
+  --sd-glass-paper-bg:     rgba(242, 234, 226, 0.62);
+  --sd-glass-paper-border: rgba(255, 251, 244, 0.65);
+
+  --sd-glass-dark-bg:     rgba(16, 42, 87, 0.55);
+  --sd-glass-dark-border: rgba(146, 178, 220, 0.35);
+  --sd-glass-dark-hi:     rgba(180, 205, 240, 0.45);
+
+  --sd-glass-gold-bg:     rgba(222, 195, 140, 0.30);
+  --sd-glass-gold-border: rgba(240, 227, 192, 0.65);
+
+  /* Elevation / shadows */
+  --sd-shadow-sm:  0 1px 2px rgba(10,28,61,.08), 0 1px 1px rgba(10,28,61,.06);
+  --sd-shadow-md:  0 4px 14px rgba(10,28,61,.10), 0 2px 4px rgba(10,28,61,.06);
+  --sd-shadow-lg:  0 18px 48px rgba(10,28,61,.18), 0 6px 14px rgba(10,28,61,.10);
+  --sd-shadow-glass: 0 8px 32px rgba(10,28,61,.18),
+                     inset 0 1px 0 var(--sd-glass-light-hi),
+                     inset 0 0 0 0.5px rgba(255,255,255,.25);
+  --sd-shadow-glass-dark: 0 10px 40px rgba(5,14,33,.45),
+                          inset 0 1px 0 var(--sd-glass-dark-hi),
+                          inset 0 0 0 0.5px rgba(146,178,220,.18);
+
+  /* Radii */
+  --sd-r-xs:   8px;
+  --sd-r-sm:   12px;
+  --sd-r-md:   18px;
+  --sd-r-lg:   26px;
+  --sd-r-xl:   34px;
+  --sd-r-pill: 999px;
+
+  /* Spacing (4px base) */
+  --sd-sp-1: 4px;  --sd-sp-2: 8px;  --sd-sp-3: 12px; --sd-sp-4: 16px;
+  --sd-sp-5: 24px; --sd-sp-6: 32px; --sd-sp-7: 48px; --sd-sp-8: 64px;
+
+  /* Typography */
+  --sd-font-display: 'Space Grotesk', system-ui, sans-serif;
+  --sd-font-body:    'Spectral', Georgia, serif;
+
+  /* Motion */
+  --sd-ease-glass: cubic-bezier(0.32, 0.72, 0, 1);
+  --sd-ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+  --sd-dur-fast:   160ms;
+  --sd-dur-base:   260ms;
+  --sd-dur-slow:   420ms;
+}
+
+/* Typography scale */
+.sd-t-display {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--sd-fg1);
+}
+.sd-t-h1 {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  color: var(--sd-fg1);
+}
+.sd-t-h2 {
+  font-family: var(--sd-font-body);
+  font-weight: 500;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -0.005em;
+  color: var(--sd-fg1);
+}
+.sd-t-subhead {
+  font-family: var(--sd-font-body);
+  font-weight: 500;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.3;
+  color: var(--sd-fg1);
+}
+.sd-t-body {
+  font-family: var(--sd-font-body);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--sd-fg2);
+}
+.sd-t-small {
+  font-family: var(--sd-font-body);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--sd-fg3);
+}
+.sd-t-label {
+  font-family: var(--sd-font-display);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--sd-fg2);
+}
+.sd-t-eyebrow {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sd-azure);
+}
+.sd-t-mono {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.01em;
+}

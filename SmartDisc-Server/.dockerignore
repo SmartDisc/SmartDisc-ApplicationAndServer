@@ -1,0 +1,8 @@
+.env
+.env.local
+.env.*.local
+.git
+.claude
+var
+vendor
+docs

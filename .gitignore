@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Env (e.g. a root .env used for `docker compose -f compose.prod.yaml` variable substitution)
+.env
+.env.local
+.env.*.local

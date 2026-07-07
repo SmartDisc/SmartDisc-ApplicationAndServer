@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Controller;
+
+use App\Dto\RegistrationRequest;
+use App\Entity\User;
+use App\Repository\UserRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use LogicException;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Exception\JsonException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use function count;
+use function is_string;
+
+#[Route('/api')]
+class UserController extends AbstractController
+{
+    public function __construct(
+        private readonly ValidatorInterface $validator,
+        private readonly RateLimiterFactoryInterface $registrationLimiter,
+    ) {
+    }
+
+    #[Route('/signup', name: 'app_signup', methods: ['POST'])]
+    public function signup(
+        Request $request,
+        UserRepository $userRepository,
+        EntityManagerInterface $entityManager,
+        UserPasswordHasherInterface $passwordHasher,
+        JWTTokenManagerInterface $jwtManager,
+    ): JsonResponse {
+        $limit = $this->registrationLimiter->create($request->getClientIp())->consume();
+        if (!$limit->isAccepted()) {
+            $retryAfterSeconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
+
+            return $this->json(
+                ['error' => 'Too many registration attempts. Please try again later.'],
+                Response::HTTP_TOO_MANY_REQUESTS,
+                ['Retry-After' => (string) $retryAfterSeconds],
+            );
+        }
+
+        try {
+            $data = $request->toArray();
+        } catch (JsonException) {
+            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!is_string($data['email'] ?? null) || !is_string($data['password'] ?? null) || !is_string($data['name'] ?? null)) {
+            return $this->json(['error' => 'email, password and name are required strings.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $registration = new RegistrationRequest();
+        $registration->email = mb_strtolower(trim($data['email']));
+        $registration->password = $data['password'];
+        $registration->name = trim($data['name']);
+
+        $violations = $this->validator->validate($registration);
+        if (count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $violation) {
+                $errors[$violation->getPropertyPath()] = $violation->getMessage();
+            }
+
+            return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if (null !== $userRepository->findOneBy(['email' => $registration->email])) {
+            return $this->json(['errors' => ['email' => 'An account with this email already exists.']], Response::HTTP_CONFLICT);
+        }
+
+        $user = new User();
+        $user->setEmail($registration->email);
+        $user->setName($registration->name);
+        $user->setPassword($passwordHasher->hashPassword($user, $registration->password));
+
+        $entityManager->persist($user);
+
+        try {
+            $entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            // Two concurrent signups raced past the findOneBy check above; the DB's unique
+            // constraint is the actual source of truth for email uniqueness.
+            return $this->json(['errors' => ['email' => 'An account with this email already exists.']], Response::HTTP_CONFLICT);
+        }
+
+        return $this->json(['token' => $jwtManager->create($user)], Response::HTTP_CREATED);
+    }
+
+    #[Route('/login', name: 'app_login', methods: ['POST'])]
+    public function login(): never
+    {
+        // Intercepted by the "login" firewall's json_login listener (with login_throttling)
+        // before this is ever reached.
+        throw new LogicException('This should never be reached.');
+    }
+
+    #[Route('/me', name: 'app_me', methods: ['GET'])]
+    public function me(#[CurrentUser] User $user): JsonResponse
+    {
+        return $this->json([
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'name' => $user->getName(),
+        ]);
+    }
+}

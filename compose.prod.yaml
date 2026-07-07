@@ -1,0 +1,16 @@
+---
+# Production stack: only the Symfony API + database.
+# SmartDisc-Application is a native Capacitor app (iOS/Android); it is not
+# served from this stack in production.
+#
+# Usage (from this directory):
+#   docker compose -f compose.prod.yaml build --pull --no-cache
+#   SERVER_NAME=your-domain.example.com \
+#   APP_SECRET=ChangeMe \
+#   CADDY_MERCURE_JWT_SECRET=ChangeThisMercureHubJWTSecretKey \
+#   docker compose -f compose.prod.yaml up --wait
+include:
+  - path: ./SmartDisc-Server/compose.yaml
+    env_file: ./SmartDisc-Server/.env
+  - path: ./SmartDisc-Server/compose.prod.yaml
+    env_file: ./SmartDisc-Server/.env

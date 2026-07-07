@@ -1,0 +1,85 @@
+/**
+ * Thin fetch wrapper for the SmartDisc API.
+ *
+ * - Resolves the base URL from VITE_API_BASE_URL (required in production
+ *   builds since a Capacitor app's own origin — capacitor://localhost /
+ *   https://localhost — is never the API's origin).
+ * - Sends `credentials: 'omit'`: auth is a Bearer token, never a cookie, so
+ *   there is no session cookie to leak cross-origin and no CSRF surface.
+ * - Normalises every non-2xx response into an ApiError so callers can branch
+ *   on `status` / `fieldErrors` instead of re-parsing bodies.
+ */
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? 'http://localhost:8083' : '')
+
+const TIMEOUT_MS = 15000
+
+export class ApiError extends Error {
+  constructor(message, { status = null, fieldErrors = null, retryAfter = null } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.fieldErrors = fieldErrors
+    this.retryAfter = retryAfter
+  }
+}
+
+export async function apiFetch(path, { method = 'GET', body, token, signal } = {}) {
+  if (!BASE_URL) {
+    throw new ApiError(
+      'API base URL is not configured. Set VITE_API_BASE_URL at build time.',
+      { status: null },
+    )
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const onExternalAbort = () => controller.abort()
+  if (signal) signal.addEventListener('abort', onExternalAbort)
+
+  let response
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+      credentials: 'omit',
+    })
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new ApiError('The request timed out. Please try again.', { status: null })
+    }
+    throw new ApiError('Could not reach the server. Check your connection and try again.', { status: null })
+  } finally {
+    clearTimeout(timeoutId)
+    if (signal) signal.removeEventListener('abort', onExternalAbort)
+  }
+
+  const contentType = response.headers.get('content-type') || ''
+  const data = contentType.includes('application/json')
+    ? await response.json().catch(() => null)
+    : null
+
+  if (!response.ok) {
+    const retryAfterHeader = response.headers.get('Retry-After')
+    const message =
+      data?.message
+      ?? data?.error
+      ?? (data?.errors && Object.values(data.errors)[0])
+      ?? `Request failed (${response.status}).`
+
+    throw new ApiError(message, {
+      status: response.status,
+      fieldErrors: data?.errors ?? null,
+      retryAfter: retryAfterHeader ? Number(retryAfterHeader) : null,
+    })
+  }
+
+  return data
+}

@@ -1,0 +1,88 @@
+/* ============================================================
+   Auth module — shared typography & layout utilities.
+   Scoped design token classes used across all auth views.
+   Imported once in main.js; all classes are prefixed `.auth-`.
+   ============================================================ */
+
+/* ----- Navigation bar (back button row) ----- */
+.auth-nav {
+  display: flex;
+  align-items: center;
+  padding: 12px 0 8px;
+  flex: none;
+}
+
+/* ----- Page header block ----- */
+.auth-header {
+  margin-bottom: 24px;
+  flex: none;
+}
+
+.auth-eyebrow {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sd-azure);
+  margin: 0;
+}
+
+.auth-h1 {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: var(--sd-fg1);
+  margin: 4px 0 0;
+}
+
+.auth-sub {
+  font-family: var(--sd-font-body);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--sd-fg2);
+  margin: 6px 0 0;
+}
+
+/* ----- Form stack ----- */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: none;
+}
+
+/* Inline form error (beneath the submit button) */
+.auth-form-error {
+  font-family: var(--sd-font-display);
+  font-size: 13px;
+  color: var(--sd-danger);
+  text-align: center;
+  margin: 0;
+}
+
+/* ----- Pushes footer to the bottom ----- */
+.auth-spacer {
+  flex: 1;
+}
+
+/* ----- Bottom "switch flow" text ----- */
+.auth-footer {
+  font-family: var(--sd-font-body);
+  font-size: 14px;
+  color: var(--sd-fg2);
+  text-align: center;
+  padding: 16px 0 40px;
+  flex: none;
+  margin-bottom: 10px;
+}
+
+.auth-footer__link {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  color: var(--sd-ink);
+  text-decoration: none;
+}
+.auth-footer__link:hover { text-decoration: underline; }
