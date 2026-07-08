@@ -13,7 +13,7 @@ import { sanitizeName, sanitizeEmail, sanitizePassword } from '@/utils/sanitize'
 import { required, password as validatePassword } from '@/utils/validate'
 
 const router = useRouter()
-const { user, changePassword } = useAuth()
+const { user, changePassword, deleteAccount } = useAuth()
 
 const name   = ref(user?.value?.name  ?? 'Alex Rivera')
 const email  = ref(user?.value?.email ?? 'alex@smartdisc.io')
@@ -58,6 +58,33 @@ async function handlePasswordChange() {
     pwLoading.value = false
   }
 }
+
+// ── Delete account sheet ──────────────────────────────────────────────────
+const deleteSheet   = ref(false)
+const deletePw      = ref('')
+const deleteLoading = ref(false)
+const deleteError   = ref('')
+
+function openDeleteSheet() {
+  deletePw.value    = ''
+  deleteError.value = ''
+  deleteSheet.value = true
+}
+
+async function handleDeleteAccount() {
+  if (!deletePw.value || deleteLoading.value) return
+  deleteLoading.value = true
+  deleteError.value   = ''
+  try {
+    await deleteAccount(deletePw.value)
+    deleteSheet.value = false
+    router.push('/welcome')
+  } catch (err) {
+    deleteError.value = mapAuthError(err)
+  } finally {
+    deleteLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -97,7 +124,7 @@ async function handlePasswordChange() {
       </SdList>
 
       <!-- Delete account -->
-      <SdBtn variant="ghost" size="md" block class="danger-btn">
+      <SdBtn variant="ghost" size="md" block class="danger-btn" @click="openDeleteSheet">
         <template #icon-left><AlertTriangle :size="16" /></template>
         Delete account
       </SdBtn>
@@ -108,6 +135,15 @@ async function handlePasswordChange() {
     <!-- Change Password sheet -->
     <SdBottomSheet v-model="passwordSheet" title="Change password">
       <div class="pw-stack">
+        <div class="pw-header">
+          <div class="pw-header__icon">
+            <KeyRound :size="18" :stroke-width="1.75" />
+          </div>
+          <div>
+            <p class="pw-header__eyebrow">Security</p>
+            <p class="pw-header__sub">Choose a strong new password for your account.</p>
+          </div>
+        </div>
         <SdField
           v-model="currentPw"
           label="Current password"
@@ -142,6 +178,42 @@ async function handlePasswordChange() {
             @click="handlePasswordChange"
           >
             {{ pwLoading ? 'Saving…' : 'Update password' }}
+          </SdBtn>
+        </div>
+      </div>
+    </SdBottomSheet>
+
+    <!-- Delete account sheet -->
+    <SdBottomSheet v-model="deleteSheet" title="Delete account">
+      <div class="pw-stack">
+        <div class="pw-header">
+          <div class="pw-header__icon pw-header__icon--danger">
+            <AlertTriangle :size="18" :stroke-width="1.75" />
+          </div>
+          <div>
+            <p class="pw-header__eyebrow pw-header__eyebrow--danger">Warning</p>
+            <p class="pw-header__sub">This permanently deletes your account and all associated data. This action cannot be undone.</p>
+          </div>
+        </div>
+        <SdField
+          v-model="deletePw"
+          label="Current password"
+          type="password"
+          :sanitize="sanitizePassword"
+          :maxlength="128"
+        />
+        <p v-if="deleteError" class="pw-error">{{ deleteError }}</p>
+        <div class="pw-actions">
+          <SdBtn variant="ghost" size="md" style="flex:1;" @click="deleteSheet = false">Cancel</SdBtn>
+          <SdBtn
+            variant="primary"
+            size="md"
+            style="flex:1;"
+            class="danger-confirm-btn"
+            :disabled="!deletePw || deleteLoading"
+            @click="handleDeleteAccount"
+          >
+            {{ deleteLoading ? 'Deleting…' : 'Delete account' }}
           </SdBtn>
         </div>
       </div>
@@ -209,6 +281,41 @@ async function handlePasswordChange() {
 /* Password sheet */
 .pw-stack { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
 
+.pw-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+.pw-header__icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sd-gold-grad);
+  color: #5a4416;
+  box-shadow: var(--sd-shadow-sm);
+}
+.pw-header__eyebrow {
+  font-family: var(--sd-font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sd-azure);
+  margin: 0 0 2px;
+}
+.pw-header__sub {
+  font-family: var(--sd-font-body);
+  font-size: 13px;
+  color: var(--sd-fg2);
+  margin: 0;
+  line-height: 1.4;
+}
+
 .pw-error {
   font-family: var(--sd-font-body);
   font-size: 13px;
@@ -221,4 +328,18 @@ async function handlePasswordChange() {
   gap: 10px;
   margin-top: 4px;
 }
+
+/* Delete account sheet */
+.pw-header__icon--danger {
+  background: rgba(192, 88, 78, .12);
+  color: var(--sd-danger);
+  box-shadow: none;
+}
+.pw-header__eyebrow--danger { color: var(--sd-danger); }
+
+.danger-confirm-btn {
+  background: var(--sd-danger) !important;
+  color: #fff !important;
+}
+.danger-confirm-btn:not(:disabled):hover { opacity: 0.9; }
 </style>

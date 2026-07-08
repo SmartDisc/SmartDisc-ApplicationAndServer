@@ -30,6 +30,7 @@ class UserController extends AbstractController
         private readonly ValidatorInterface $validator,
         private readonly RateLimiterFactoryInterface $registrationLimiter,
         private readonly RateLimiterFactoryInterface $changePasswordLimiter,
+        private readonly RateLimiterFactoryInterface $deleteAccountLimiter,
     ) {
     }
 
@@ -170,5 +171,43 @@ class UserController extends AbstractController
         $entityManager->flush();
 
         return $this->json(['message' => 'Password updated successfully.']);
+    }
+
+    #[Route('/delete-account', name: 'app_delete_account', methods: ['DELETE'])]
+    public function deleteAccount(
+        Request $request,
+        #[CurrentUser] User $user,
+        EntityManagerInterface $entityManager,
+        UserPasswordHasherInterface $passwordHasher,
+    ): JsonResponse {
+        $limit = $this->deleteAccountLimiter->create($user->getUserIdentifier())->consume();
+        if (!$limit->isAccepted()) {
+            $retryAfterSeconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
+
+            return $this->json(
+                ['error' => 'Too many attempts. Please try again later.'],
+                Response::HTTP_TOO_MANY_REQUESTS,
+                ['Retry-After' => (string) $retryAfterSeconds],
+            );
+        }
+
+        try {
+            $data = $request->toArray();
+        } catch (JsonException) {
+            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!is_string($data['currentPassword'] ?? null)) {
+            return $this->json(['error' => 'currentPassword is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!$passwordHasher->isPasswordValid($user, $data['currentPassword'])) {
+            return $this->json(['errors' => ['currentPassword' => 'Current password is incorrect.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $entityManager->remove($user);
+        $entityManager->flush();
+
+        return $this->json(['message' => 'Account deleted successfully.']);
     }
 }

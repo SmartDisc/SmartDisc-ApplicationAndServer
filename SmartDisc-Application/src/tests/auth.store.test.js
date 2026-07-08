@@ -258,6 +258,50 @@ describe('auth store — signOut', () => {
   })
 })
 
+describe('auth store — deleteAccount', () => {
+  it('calls the delete-account endpoint and clears the session on success', async () => {
+    apiFetch
+      .mockResolvedValueOnce({ token: VALID_TOKEN }) // POST /api/login
+      .mockResolvedValueOnce(ME)                      // GET /api/me
+      .mockResolvedValueOnce({ message: 'Account deleted successfully.' }) // DELETE /api/delete-account
+
+    const store = useAuthStore()
+    await store.signIn('a@b.com', 'Correct1!')
+    expect(store.isAuthenticated).toBe(true)
+
+    await store.deleteAccount('Correct1!')
+
+    expect(apiFetch).toHaveBeenNthCalledWith(3, '/api/delete-account', {
+      method: 'DELETE',
+      body: { currentPassword: 'Correct1!' },
+      token: VALID_TOKEN,
+    })
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.token).toBeNull()
+    expect(store.user).toBeNull()
+    expect(Preferences.remove).toHaveBeenCalledWith({ key: 'sd_auth_token' })
+  })
+
+  it('does not clear the session if the server rejects the request', async () => {
+    apiFetch
+      .mockResolvedValueOnce({ token: VALID_TOKEN })
+      .mockResolvedValueOnce(ME)
+      .mockRejectedValueOnce(new ApiError('Current password is incorrect.', {
+        status: 422,
+        fieldErrors: { currentPassword: 'Current password is incorrect.' },
+      }))
+
+    const store = useAuthStore()
+    await store.signIn('a@b.com', 'Correct1!')
+
+    await expect(store.deleteAccount('wrong')).rejects.toThrow()
+
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.token).toBe(VALID_TOKEN)
+    expect(Preferences.remove).not.toHaveBeenCalled()
+  })
+})
+
 describe('auth store — clearError', () => {
   it('resets the error state', async () => {
     apiFetch.mockRejectedValue(new ApiError('Invalid credentials.', { status: 401 }))

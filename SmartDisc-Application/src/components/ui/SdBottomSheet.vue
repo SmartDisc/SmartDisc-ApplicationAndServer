@@ -133,10 +133,10 @@ watch(() => props.modelValue, (open) => {
   width: 100%;
   max-width: 390px;
   max-height: 85dvh;
-  background: var(--sd-glass-light-bg);
+  background: var(--sd-glass-paper-bg);
   backdrop-filter: var(--sd-glass-blur-strong);
   -webkit-backdrop-filter: var(--sd-glass-blur-strong);
-  border: 1px solid var(--sd-glass-light-border);
+  border: 1px solid var(--sd-glass-paper-border);
   border-bottom: none;
   border-radius: var(--sd-r-xl) var(--sd-r-xl) 0 0;
   box-shadow: var(--sd-shadow-lg);

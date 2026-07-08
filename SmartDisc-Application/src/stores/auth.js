@@ -113,6 +113,15 @@ export const useAuthStore = defineStore('auth', {
       })
     },
 
+    async deleteAccount(currentPassword) {
+      await apiFetch('/api/delete-account', {
+        method: 'DELETE',
+        body: { currentPassword },
+        token: this.token,
+      })
+      await this._clearSession()
+    },
+
     clearError() {
       this.error = null
     },

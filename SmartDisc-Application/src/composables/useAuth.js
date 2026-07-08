@@ -37,6 +37,10 @@ export function useAuth() {
     await store.changePassword(currentPassword, newPassword)
   }
 
+  async function deleteAccount(currentPassword) {
+    await store.deleteAccount(currentPassword)
+  }
+
   // ---------------------------------------------------------------------
   // Stubs — replace with real API calls once the server supports them.
   // ---------------------------------------------------------------------
@@ -89,6 +93,7 @@ export function useAuth() {
     resendCode,
     signOut,
     changePassword,
+    deleteAccount,
     sendPasswordReset,
   }
 }
