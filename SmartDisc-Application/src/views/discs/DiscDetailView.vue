@@ -1,23 +1,56 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Pencil, MoreHorizontal, List, BarChart3, Users, Star } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SdAppBar from '@/components/ui/SdAppBar.vue'
-import { SdCard, SdIconBtn } from '@/components/ui'
+import { SdCard, SdIconBtn, SdBottomSheet, SdField, SdBtn } from '@/components/ui'
 import { useDiscs } from '@/composables/useDiscs'
+import { useFavorites } from '@/composables/useFavorites'
+import { mapAuthError } from '@/stores/auth'
+import { sanitizeText } from '@/utils/sanitize'
+import { useI18n } from '@/i18n'
 
 const route  = useRoute()
 const router = useRouter()
-const { getDisc } = useDiscs()
+const { getDisc, renameDisc } = useDiscs()
+const { isFavorite, toggleFavorite } = useFavorites()
+const { t } = useI18n()
 
 const disc = computed(() => getDisc(route.params.id))
 
-const tabs = [
-  { key: 'throws', label: 'Throws', icon: List,     count: () => disc.value?.throws, to: suffix => `/discs/${route.params.id}/throws` },
-  { key: 'stats',  label: 'Stats',  icon: BarChart3, to: suffix => `/discs/${route.params.id}/stats` },
-  { key: 'people', label: 'People', icon: Users,     count: () => disc.value?.players, to: suffix => `/discs/${route.params.id}/people` },
-]
+// ── Rename (persisted on the backend) ─────────────────────────────────────
+const renameSheet = ref(false)
+const renameValue = ref('')
+const renameError = ref('')
+const renameLoading = ref(false)
+
+function openRenameSheet() {
+  renameValue.value = disc.value?.name ?? ''
+  renameError.value = ''
+  renameSheet.value = true
+}
+
+async function handleRename() {
+  const name = renameValue.value.trim()
+  if (!name || renameLoading.value) return
+  renameLoading.value = true
+  renameError.value = ''
+  try {
+    await renameDisc(route.params.id, name)
+    renameSheet.value = false
+  } catch (err) {
+    renameError.value = mapAuthError(err)
+  } finally {
+    renameLoading.value = false
+  }
+}
+
+const tabs = computed(() => [
+  { key: 'throws', label: t('discs.detail.throws'), icon: List,     count: () => disc.value?.throws, to: suffix => `/discs/${route.params.id}/throws` },
+  { key: 'stats',  label: t('discs.detail.stats'),  icon: BarChart3, to: suffix => `/discs/${route.params.id}/stats` },
+  { key: 'people', label: t('discs.detail.people'), icon: Users,     count: () => disc.value?.players, to: suffix => `/discs/${route.params.id}/people` },
+])
 
 const activeTab = computed(() => {
   if (route.path.endsWith('/stats'))  return 'stats'
@@ -45,17 +78,54 @@ const activeTab = computed(() => {
         <div class="hero-card__info">
           <div class="hero-card__name-row">
             <span class="hero-card__name">{{ disc.name }}</span>
-            <Pencil :size="14" :stroke-width="1.75" style="color: var(--sd-fg3);" />
+            <button type="button" class="hero-card__edit" @click="openRenameSheet">
+              <Pencil :size="14" :stroke-width="1.75" style="color: var(--sd-fg3);" />
+            </button>
           </div>
           <div class="hero-card__uuid">{{ disc.uuid }}</div>
         </div>
-        <Star
-          :size="22"
-          :stroke-width="2"
-          :style="{ color: disc.fav ? 'var(--sd-gold-500)' : 'var(--sd-mist)' }"
-        />
+        <button
+          type="button"
+          class="hero-card__fav"
+          :aria-pressed="isFavorite(disc.id)"
+          @click="toggleFavorite(disc.id)"
+        >
+          <Star
+            :size="22"
+            :stroke-width="2"
+            :fill="isFavorite(disc.id) ? 'var(--sd-gold-500)' : 'none'"
+            :style="{ color: isFavorite(disc.id) ? 'var(--sd-gold-500)' : 'var(--sd-mist)' }"
+          />
+        </button>
       </div>
     </SdCard>
+
+    <!-- Rename sheet -->
+    <SdBottomSheet v-model="renameSheet" :title="t('discs.detail.renameSheetTitle')">
+      <div class="rename-stack">
+        <SdField
+          v-model="renameValue"
+          :label="t('discs.detail.renameLabel')"
+          :sanitize="sanitizeText"
+          :maxlength="60"
+          :error="renameError"
+        />
+        <div class="rename-actions">
+          <SdBtn variant="ghost" size="md" style="flex:1;" @click="renameSheet = false">
+            {{ t('common.cancel') }}
+          </SdBtn>
+          <SdBtn
+            variant="primary"
+            size="md"
+            style="flex:1;"
+            :disabled="!renameValue.trim() || renameLoading"
+            @click="handleRename"
+          >
+            {{ renameLoading ? t('discs.detail.renaming') : t('common.save') }}
+          </SdBtn>
+        </div>
+      </div>
+    </SdBottomSheet>
 
     <!-- Top tabs -->
     <nav class="top-tabs">
@@ -119,6 +189,33 @@ const activeTab = computed(() => {
   font-size: 11px;
   color: var(--sd-fg3);
   letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+
+.hero-card__edit,
+.hero-card__fav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  margin: -6px;
+  display: flex;
+  flex: none;
+  border-radius: 999px;
+}
+.hero-card__edit:active,
+.hero-card__fav:active { transform: scale(0.9); }
+
+.rename-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.rename-actions {
+  display: flex;
+  gap: 10px;
   margin-top: 4px;
 }
 

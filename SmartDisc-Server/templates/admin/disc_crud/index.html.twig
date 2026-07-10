@@ -1,0 +1,39 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Discs — SmartDisc Admin{% endblock %}
+
+{% block admin_body %}
+    <div class="admin-actions-row">
+        <div>
+            <p class="admin-eyebrow">Manage</p>
+            <h1 class="admin-title" style="margin-bottom: 0;">Discs</h1>
+        </div>
+        <form method="post" action="{{ path('app_admin_disc_crud_create') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('create_disc') }}">
+            <button class="admin-btn" type="submit">+ Create disc</button>
+        </form>
+    </div>
+
+    {% if discs|length == 0 %}
+        <div class="admin-card admin-empty">No discs yet — create one above.</div>
+    {% else %}
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>UUID</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for disc in discs %}
+                <tr>
+                    <td><code>{{ disc.id }}</code></td>
+                    <td class="admin-table__actions">
+                        {{ include('admin/disc_crud/_delete_form.html.twig') }}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endblock %}

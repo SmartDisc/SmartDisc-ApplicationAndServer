@@ -1,0 +1,25 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Disc created — SmartDisc Admin{% endblock %}
+
+{% block admin_body %}
+    <p class="admin-eyebrow">Created</p>
+    <h1 class="admin-title">Save these now</h1>
+
+    <div class="admin-card admin-reveal">
+        <div class="admin-flash admin-flash--error" style="margin-bottom: 20px;">
+            The password is shown only this once and cannot be recovered later — copy it now.
+        </div>
+
+        <div class="admin-reveal__row">
+            <span class="admin-reveal__label">UUID</span>
+            <code class="admin-reveal__value">{{ id }}</code>
+        </div>
+        <div class="admin-reveal__row">
+            <span class="admin-reveal__label">Password</span>
+            <code class="admin-reveal__value">{{ password }}</code>
+        </div>
+    </div>
+
+    <a class="admin-btn" href="{{ path('app_admin_disc_crud_index') }}">Done, back to list</a>
+{% endblock %}

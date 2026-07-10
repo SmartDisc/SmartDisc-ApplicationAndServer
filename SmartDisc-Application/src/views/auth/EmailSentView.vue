@@ -6,9 +6,11 @@ import AuthLayout from '@/layouts/AuthLayout.vue'
 import AuthBackBtn from '@/components/auth/AuthBackBtn.vue'
 import { SdBtn } from '@/components/ui'
 import { useAuth } from '@/composables/useAuth'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const { sendPasswordReset, isLoading } = useAuth()
+const { t } = useI18n()
 
 const sentTo = ref(history.state?.email || '')
 
@@ -62,17 +64,17 @@ const formattedCountdown = () => {
         <MailCheck :size="42" :stroke-width="1.5" />
       </div>
 
-      <p class="auth-eyebrow">Check your inbox</p>
-      <h1 class="auth-h1">Link sent.</h1>
+      <p class="auth-eyebrow">{{ t('auth.emailSent.eyebrow') }}</p>
+      <h1 class="auth-h1">{{ t('auth.emailSent.title') }}</h1>
       <p class="auth-sub">
-        We sent a reset link to
-        <strong class="email-sent-address">{{ sentTo || 'your email' }}</strong>.
-        Open it on this device to set a new password.
+        {{ t('auth.emailSent.subtitlePrefix') }}
+        <strong class="email-sent-address">{{ sentTo || t('auth.emailSent.defaultEmail') }}</strong>.
+        {{ t('auth.emailSent.subtitleSuffix') }}
       </p>
 
       <div class="email-sent-expiry">
         <Clock :size="14" :stroke-width="1.75" />
-        <span>Expires in 30 minutes</span>
+        <span>{{ t('auth.emailSent.expiresIn') }}</span>
       </div>
     </div>
 
@@ -84,11 +86,11 @@ const formattedCountdown = () => {
         <template #icon-left>
           <ExternalLink :size="17" :stroke-width="1.75" />
         </template>
-        Open mail app
+        {{ t('auth.emailSent.openMailApp') }}
       </SdBtn>
 
       <p class="email-sent-resend">
-        Didn't get it?
+        {{ t('auth.emailSent.didntGetIt') }}
         <button
           class="email-sent-resend__btn"
           :disabled="!canResend || isLoading"
@@ -96,8 +98,8 @@ const formattedCountdown = () => {
         >
           {{
             canResend
-              ? 'Resend'
-              : `Resend in ${formattedCountdown()}`
+              ? t('auth.emailSent.resend')
+              : t('auth.emailSent.resendIn', { time: formattedCountdown() })
           }}
         </button>
       </p>

@@ -5,13 +5,28 @@ import { SdChip, SdCard } from '@/components/ui'
 import SdStatTile from '@/components/ui/SdStatTile.vue'
 import { TrendingUp, Star } from 'lucide-vue-next'
 import { useDiscs } from '@/composables/useDiscs'
+import { usePreferences } from '@/composables/usePreferences'
+import { useI18n } from '@/i18n'
+import { convertSpeed, speedUnitLabel, convertDistance, distanceUnitLabel, formatDistance } from '@/utils/units'
 
 const route = useRoute()
 const { getDisc } = useDiscs()
+const { speedUnit, distanceUnit } = usePreferences()
+const { t } = useI18n()
 const disc = computed(() => getDisc(route.params.id))
 
+// Mock chart/summary data — base values are km/h and meters.
+const topSpeedKmh   = 28
+const maxHeightM    = 5.4
+const bestThrowM    = 41
+const topSpeed      = computed(() => convertSpeed(topSpeedKmh, speedUnit.value))
+const topSpeedUnit  = computed(() => speedUnitLabel(speedUnit.value))
+const maxHeight     = computed(() => convertDistance(maxHeightM, distanceUnit.value))
+const maxHeightUnit = computed(() => distanceUnitLabel(distanceUnit.value))
+const bestThrow     = computed(() => formatDistance(bestThrowM, distanceUnit.value))
+
 const bars = [24, 32, 28, 40, 52, 36, 68]
-const days = ['MON','TUE','WED','THU','FRI','SAT','SUN']
+const days = computed(() => t('discs.stats.weekdays'))
 </script>
 
 <template>
@@ -20,8 +35,8 @@ const days = ['MON','TUE','WED','THU','FRI','SAT','SUN']
     <SdCard :padding="18">
       <div class="glass-card__header">
         <div class="stat-group">
-          <div class="stat-label">Top speed · 7 days</div>
-          <div class="stat-big">28<span class="stat-unit">km/h</span></div>
+          <div class="stat-label">{{ t('discs.stats.topSpeed') }}</div>
+          <div class="stat-big">{{ topSpeed }}<span class="stat-unit">{{ topSpeedUnit }}</span></div>
         </div>
         <SdChip tone="gold">
           <template #icon><TrendingUp :size="12" /></template>
@@ -45,32 +60,32 @@ const days = ['MON','TUE','WED','THU','FRI','SAT','SUN']
     <!-- RPM + Height tiles -->
     <div class="tile-row">
       <SdCard flex :padding="16">
-        <div class="stat-label">Avg spin</div>
+        <div class="stat-label">{{ t('discs.stats.avgSpin') }}</div>
         <div class="stat-big">1 182<span class="stat-unit">rpm</span></div>
         <div class="gauge"><div class="gauge__fill" style="width: 62%;" /></div>
-        <div class="trend trend--up">↑ 8% vs last week</div>
+        <div class="trend trend--up">{{ t('discs.stats.trendUp') }}</div>
       </SdCard>
       <SdCard flex :padding="16">
-        <div class="stat-label">Max height</div>
-        <div class="stat-big">5.4<span class="stat-unit">m</span></div>
+        <div class="stat-label">{{ t('discs.stats.maxHeight') }}</div>
+        <div class="stat-big">{{ maxHeight }}<span class="stat-unit">{{ maxHeightUnit }}</span></div>
         <div class="gauge"><div class="gauge__fill" style="width: 48%;" /></div>
-        <div class="trend">= same as last</div>
+        <div class="trend">{{ t('discs.stats.trendSame') }}</div>
       </SdCard>
     </div>
 
     <!-- Best throw -->
     <SdCard :padding="18">
       <div class="glass-card__header">
-        <div class="stat-label">Best throw this week</div>
+        <div class="stat-label">{{ t('discs.stats.bestThrow') }}</div>
         <SdChip tone="gold">
           <template #icon><Star :size="12" /></template>
-          41 m
+          {{ bestThrow }}
         </SdChip>
       </div>
       <div class="best-throw">
         <div>
           <div class="throw-name">Long huck</div>
-          <div class="throw-time">Today · 14:21 · 1 320 rpm</div>
+          <div class="throw-time">{{ t('discs.days.today') }} · 14:21 · 1 320 rpm</div>
         </div>
       </div>
     </SdCard>

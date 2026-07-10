@@ -8,8 +8,10 @@ import { SdChip, SdIconBtn } from '@/components/ui'
 import { Star, Eye } from 'lucide-vue-next'
 
 import { sanitizeText } from '@/utils/sanitize'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 const query = ref('')
 
 function onSearchInput(e) {
@@ -32,7 +34,7 @@ function onSearchInput(e) {
         <input
           :value="query"
           class="search-input"
-          placeholder="Search discs &amp; throws…"
+          :placeholder="t('search.placeholder')"
           maxlength="300"
           autofocus
           @input="onSearchInput"
@@ -45,51 +47,51 @@ function onSearchInput(e) {
 
     <!-- Filter chips -->
     <div class="filter-row">
-      <SdChip tone="owner">All · 7</SdChip>
-      <SdChip tone="solid-light">Discs · 1</SdChip>
-      <SdChip tone="solid-light">Throws · 6</SdChip>
+      <SdChip tone="owner">{{ t('search.filterAll', { count: 7 }) }}</SdChip>
+      <SdChip tone="solid-light">{{ t('search.filterDiscs', { count: 1 }) }}</SdChip>
+      <SdChip tone="solid-light">{{ t('search.filterThrows', { count: 6 }) }}</SdChip>
     </div>
 
     <!-- Results -->
     <div class="results">
-      <p class="results-label">Discs</p>
+      <p class="results-label">{{ t('search.discsLabel') }}</p>
       <div class="result-row">
         <div class="result-mark">
           <img src="/images/SmartDisc_Mark.png" alt="" style="width: 28px; height: 28px;" />
         </div>
         <div class="result-body">
           <div class="result-name">Sky H<mark>uck</mark>er</div>
-          <div class="result-sub">42 throws · last today</div>
+          <div class="result-sub">42 {{ t('search.throwsSuffix') }}</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sd-fg3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </div>
 
-      <p class="results-label" style="margin-top: 6px;">Throws</p>
+      <p class="results-label" style="margin-top: 6px;">{{ t('search.throwsLabel') }}</p>
       <div class="result-row">
         <Star :size="20" :stroke-width="2" style="color: var(--sd-gold-500); flex: none;" />
         <div class="result-body">
           <div class="result-name">Long <mark>huck</mark></div>
-          <div class="result-sub">Sky Hammer · today · 14:21</div>
+          <div class="result-sub">Sky Hammer · {{ t('discs.days.today').toLowerCase() }} · 14:21</div>
         </div>
-        <div class="result-metric">1320<small>RPM</small></div>
+        <div class="result-metric">1320<small>{{ t('search.rpm') }}</small></div>
       </div>
       <div class="result-row">
         <Star :size="20" :stroke-width="2" style="color: var(--sd-gold-500); flex: none;" />
         <div class="result-body">
           <div class="result-name">Sunset <mark>huck</mark></div>
-          <div class="result-sub">Night Owl · yesterday · 19:02</div>
+          <div class="result-sub">Night Owl · {{ t('discs.days.yesterday').toLowerCase() }} · 19:02</div>
         </div>
-        <div class="result-metric">1240<small>RPM</small></div>
+        <div class="result-metric">1240<small>{{ t('search.rpm') }}</small></div>
       </div>
       <div class="result-row">
         <div style="width: 20px; flex: none;" />
         <div class="result-body">
           <div class="result-name">Endzone <mark>huck</mark></div>
-          <div class="result-sub">Team Disc — Reds · Sat · 11:14</div>
+          <div class="result-sub">Team Disc — Reds · {{ t('discs.days.sat') }} · 11:14</div>
         </div>
         <SdChip tone="read">
           <template #icon><Eye :size="12" /></template>
-          Read
+          {{ t('common.read') }}
         </SdChip>
       </div>
     </div>

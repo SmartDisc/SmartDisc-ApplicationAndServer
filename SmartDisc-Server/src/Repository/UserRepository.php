@@ -33,6 +33,29 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
+    /**
+     * Case-insensitive partial match on email or name, excluding the given user ids.
+     *
+     * @param list<int> $excludeIds
+     *
+     * @return list<User>
+     */
+    public function searchByEmailOrName(string $query, array $excludeIds, int $maxResults = 10): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->andWhere('LOWER(u.email) LIKE :query OR LOWER(u.name) LIKE :query')
+            ->setParameter('query', '%'.mb_strtolower($query).'%')
+            ->orderBy('u.name', 'ASC')
+            ->setMaxResults($maxResults);
+
+        if ([] !== $excludeIds) {
+            $qb->andWhere('u.id NOT IN (:excludeIds)')
+                ->setParameter('excludeIds', $excludeIds);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
     //    /**
     //     * @return User[] Returns an array of User objects
     //     */

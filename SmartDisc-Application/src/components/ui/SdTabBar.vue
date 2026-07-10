@@ -1,14 +1,19 @@
 <script setup>
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Disc3, Users, Settings } from 'lucide-vue-next'
+import { Disc3, Share2, Settings } from 'lucide-vue-next'
+import { useI18n } from '@/i18n'
 
 const route = useRoute()
+const { t } = useI18n()
 
-const tabs = [
-  { key: 'discs',    label: 'My Discs',  icon: Disc3,    to: '/discs' },
-  { key: 'shared',   label: 'Shared',    icon: Users,    to: '/shared' },
-  { key: 'settings', label: 'Settings',  icon: Settings, to: '/settings' },
-]
+const tabs = computed(() => [
+  { key: 'discs',    label: t('tabBar.myDiscs'),  icon: Disc3,    to: '/discs' },
+  { key: 'shared',   label: t('tabBar.shared'),   icon: Share2,   to: '/shared' },
+  { key: 'settings', label: t('tabBar.settings'), icon: Settings, to: '/settings' },
+])
+// Text labels are dropped from the bar itself (icons only, larger) but kept
+// on each tab as an aria-label so the bar stays accessible/screen-reader friendly.
 
 function isActive(tab) {
   return route.path.startsWith(tab.to)
@@ -22,9 +27,9 @@ function isActive(tab) {
       :key="tab.key"
       :to="tab.to"
       :class="['tabbar__item', { 'tabbar__item--on': isActive(tab) }]"
+      :aria-label="tab.label"
     >
-      <component :is="tab.icon" :size="17" :stroke-width="isActive(tab) ? 2 : 1.75" class="tabbar__icon" />
-      <span class="tabbar__label">{{ tab.label }}</span>
+      <component :is="tab.icon" :size="24" :stroke-width="isActive(tab) ? 2.1 : 1.75" class="tabbar__icon" />
     </RouterLink>
   </nav>
 </template>
@@ -50,24 +55,15 @@ function isActive(tab) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
   border-radius: var(--sd-r-pill);
-  font-family: var(--sd-font-display);
-  font-weight: 500;
-  font-size: 13px;
   color: var(--sd-fg2);
-  padding: 11px 8px;
+  padding: 13px 8px;
   text-decoration: none;
+  transition: background var(--sd-dur-fast) var(--sd-ease-out),
+              color var(--sd-dur-fast) var(--sd-ease-out);
 }
 
 .tabbar__icon { flex-shrink: 0; }
-
-.tabbar__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .tabbar__item--on {
   background: var(--sd-ink);

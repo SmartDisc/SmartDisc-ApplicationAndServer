@@ -9,17 +9,19 @@ import SdPasswordHint from '@/components/auth/SdPasswordHint.vue'
 import { useAuth } from '@/composables/useAuth'
 import { email as validateEmail, required } from '@/utils/validate'
 import { sanitizeEmail, sanitizePassword } from '@/utils/sanitize'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const { signIn, isLoading, error: authError, clearError } = useAuth()
+const { t } = useI18n()
 
 const form     = reactive({ email: '', password: '' })
 const errors   = reactive({ email: '', password: '' })
 const showHint = ref(false)
 
 function validate() {
-  errors.email    = validateEmail(form.email)
-  errors.password = required(form.password, 'Password')
+  errors.email    = validateEmail(form.email, t)
+  errors.password = required(form.password, t('validate.passwordLabel'), t)
   return !errors.email && !errors.password
 }
 
@@ -42,16 +44,16 @@ async function handleSubmit() {
     </nav>
 
     <header class="auth-header">
-      <p class="auth-eyebrow">Welcome back</p>
-      <h1 class="auth-h1">Sign in.</h1>
-      <p class="auth-sub">Your discs are ready when you are.</p>
+      <p class="auth-eyebrow">{{ t('auth.signIn.eyebrow') }}</p>
+      <h1 class="auth-h1">{{ t('auth.signIn.title') }}</h1>
+      <p class="auth-sub">{{ t('auth.signIn.subtitle') }}</p>
     </header>
 
     <form class="auth-form" novalidate @submit.prevent="handleSubmit">
       <SdField
         v-model="form.email"
-        label="Email"
-        placeholder="you@email.com"
+        :label="t('auth.email')"
+        :placeholder="t('auth.emailPlaceholder')"
         type="email"
         autocomplete="username"
         :error="errors.email"
@@ -66,8 +68,8 @@ async function handleSubmit() {
       <div class="password-wrap">
         <SdField
           v-model="form.password"
-          label="Password"
-          placeholder="••••••••"
+          :label="t('auth.password')"
+          :placeholder="t('auth.currentPasswordPlaceholder')"
           type="password"
           autocomplete="current-password"
           :error="errors.password"
@@ -83,7 +85,7 @@ async function handleSubmit() {
               class="info-btn"
               :class="{ 'info-btn--active': showHint }"
               @click="showHint = !showHint"
-              :aria-label="showHint ? 'Hide password rules' : 'Show password rules'"
+              :aria-label="showHint ? t('auth.hidePasswordRules') : t('auth.showPasswordRules')"
             >
               <Info :size="16" :stroke-width="1.75" />
             </button>
@@ -94,7 +96,7 @@ async function handleSubmit() {
 
       <div class="sign-in__forgot">
         <RouterLink to="/forgot-password" class="sign-in__forgot-link">
-          Forgot password?
+          {{ t('auth.signIn.forgotPassword') }}
         </RouterLink>
       </div>
 
@@ -109,7 +111,7 @@ async function handleSubmit() {
         block
         :disabled="isLoading"
       >
-        {{ isLoading ? 'Signing in…' : 'Sign in' }}
+        {{ isLoading ? t('auth.signIn.submitting') : t('auth.signIn.submit') }}
         <template v-if="!isLoading" #icon-right>
           <ArrowRight :size="18" :stroke-width="2" />
         </template>
@@ -119,9 +121,9 @@ async function handleSubmit() {
     <div class="auth-spacer" />
 
     <footer class="auth-footer">
-      New to SmartDisc?
+      {{ t('auth.signIn.newToApp') }}
       <RouterLink to="/sign-up" class="auth-footer__link">
-        Create an account
+        {{ t('auth.signIn.createAccountLink') }}
       </RouterLink>
     </footer>
   </AuthLayout>

@@ -1,8 +1,12 @@
 <script setup>
+import { computed } from 'vue'
 import { Activity, Eye, Star } from 'lucide-vue-next'
 import SdChip from '@/components/ui/SdChip.vue'
+import { usePreferences } from '@/composables/usePreferences'
+import { useI18n } from '@/i18n'
+import { convertDistance, distanceUnitLabel } from '@/utils/units'
 
-defineProps({
+const props = defineProps({
   name:       { type: String, required: true },
   uuid:       { type: String, required: true },
   throws:     { type: [Number, String], default: 0 },
@@ -12,6 +16,13 @@ defineProps({
   shared:     { type: Boolean, default: false },
   lastActive: { type: String, default: null },
 })
+
+defineEmits(['toggle-fav'])
+
+const { distanceUnit } = usePreferences()
+const { t } = useI18n()
+const longestDisplay = computed(() => convertDistance(Number(props.longest), distanceUnit.value))
+const longestUnit = computed(() => distanceUnitLabel(distanceUnit.value))
 </script>
 
 <template>
@@ -27,27 +38,35 @@ defineProps({
       </div>
       <SdChip v-if="shared" tone="read">
         <template #icon><Eye :size="12" /></template>
-        Read
+        {{ t('discs.discCard.read') }}
       </SdChip>
-      <Star
+      <button
         v-else
-        :size="22"
-        :stroke-width="2"
-        :style="{ color: fav ? 'var(--sd-gold-500)' : 'var(--sd-mist)' }"
-      />
+        type="button"
+        class="disc-card__fav"
+        :aria-pressed="fav"
+        @click.stop="$emit('toggle-fav')"
+      >
+        <Star
+          :size="22"
+          :stroke-width="2"
+          :fill="fav ? 'var(--sd-gold-500)' : 'none'"
+          :style="{ color: fav ? 'var(--sd-gold-500)' : 'var(--sd-mist)' }"
+        />
+      </button>
     </div>
     <div class="disc-card__stats">
       <div class="disc-card__stat">
         <div class="disc-card__stat-v">{{ throws }}</div>
-        <div class="disc-card__stat-k">THROWS</div>
+        <div class="disc-card__stat-k">{{ t('discs.discCard.throws') }}</div>
       </div>
       <div class="disc-card__stat">
-        <div class="disc-card__stat-v">{{ longest }}<span class="disc-card__stat-u">m</span></div>
-        <div class="disc-card__stat-k">LONGEST</div>
+        <div class="disc-card__stat-v">{{ longestDisplay }}<span class="disc-card__stat-u">{{ longestUnit }}</span></div>
+        <div class="disc-card__stat-k">{{ t('discs.discCard.longest') }}</div>
       </div>
       <div class="disc-card__stat">
         <div class="disc-card__stat-v">{{ players }}</div>
-        <div class="disc-card__stat-k">PLAYERS</div>
+        <div class="disc-card__stat-k">{{ t('discs.discCard.players') }}</div>
       </div>
     </div>
   </div>
@@ -121,6 +140,18 @@ defineProps({
   margin-top: 5px;
 }
 .disc-card__activity span { color: var(--sd-success); font-weight: 600; }
+
+.disc-card__fav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  margin: -6px;
+  display: flex;
+  flex: none;
+  border-radius: 999px;
+}
+.disc-card__fav:active { transform: scale(0.9); }
 
 .disc-card__stats {
   display: flex;

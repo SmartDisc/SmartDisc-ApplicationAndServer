@@ -2,8 +2,10 @@
 import { useRouter } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { SdBtn } from '@/components/ui'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -18,21 +20,20 @@ const router = useRouter()
       </div>
 
       <div class="welcome-copy">
-        <p class="welcome-eyebrow">Smart sensor disc</p>
-        <h1 class="welcome-h1">Every throw,<br />measured.</h1>
+        <p class="welcome-eyebrow">{{ t('welcome.eyebrow') }}</p>
+        <h1 class="welcome-h1" style="white-space: pre-line;">{{ t('welcome.title') }}</h1>
         <p class="welcome-sub">
-          Track speed, spin and height for every disc you own — and share the
-          data with your team.
+          {{ t('welcome.subtitle') }}
         </p>
       </div>
     </div>
 
     <div class="welcome-actions">
       <SdBtn variant="gold" size="lg" block @click="router.push('/sign-up')">
-        Create account
+        {{ t('welcome.createAccount') }}
       </SdBtn>
       <SdBtn variant="dark-glass" size="lg" block @click="router.push('/sign-in')">
-        Sign in
+        {{ t('welcome.signIn') }}
       </SdBtn>
     </div>
   </AuthLayout>

@@ -7,13 +7,28 @@ import SdStatTile from '@/components/ui/SdStatTile.vue'
 import { SdBtn } from '@/components/ui'
 import { MoreHorizontal, Star, Share2 } from 'lucide-vue-next'
 import { useDiscs } from '@/composables/useDiscs'
+import { usePreferences } from '@/composables/usePreferences'
+import { useI18n } from '@/i18n'
+import { convertSpeed, speedUnitLabel, convertDistance, distanceUnitLabel, formatDistance } from '@/utils/units'
 
 const route = useRoute()
 const { getDisc } = useDiscs()
+const { speedUnit, distanceUnit } = usePreferences()
+const { t } = useI18n()
 const disc  = computed(() => getDisc(route.params.id))
 const throw_ = computed(() =>
-  disc.value?.throws_list.find(t => String(t.id) === String(route.params.throwId)) ?? null
+  disc.value?.throws_list.find(th => String(th.id) === String(route.params.throwId)) ?? null
 )
+
+// Mock flight stats — base values are km/h / meters.
+const speed    = computed(() => convertSpeed(throw_.value?.speedKmh ?? 27, speedUnit.value))
+const speedU   = computed(() => speedUnitLabel(speedUnit.value))
+const height   = computed(() => convertDistance(3.8, distanceUnit.value))
+const heightU  = computed(() => distanceUnitLabel(distanceUnit.value))
+const distance = computed(() => convertDistance(41, distanceUnit.value))
+const distanceU = computed(() => distanceUnitLabel(distanceUnit.value))
+const catchLabel = computed(() => formatDistance(41, distanceUnit.value))
+const throwDay = computed(() => throw_.value ? t(`discs.days.${throw_.value.day}`) : t('discs.days.today'))
 </script>
 
 <template>
@@ -33,16 +48,16 @@ const throw_ = computed(() =>
       </SdAppBar>
 
       <div class="throw-header">
-        <div class="throw-eyebrow">Throw · {{ disc?.name }}</div>
-        <h1 class="throw-title">{{ throw_?.name ?? 'Throw' }}</h1>
-        <p class="throw-time">{{ throw_?.time?.split('·')[0] ?? 'Today' }}</p>
+        <div class="throw-eyebrow">{{ t('discs.throwDetail.throwOf', { name: disc?.name ?? '' }) }}</div>
+        <h1 class="throw-title">{{ throw_?.name ?? t('discs.throwDetail.defaultName') }}</h1>
+        <p class="throw-time">{{ throwDay }}</p>
       </div>
 
       <!-- Primary stats -->
       <div class="stat-row">
-        <SdStatTile dark :v="throw_?.rpm ?? 1320" k="RPM" />
-        <SdStatTile dark v="27" u="km/h" k="Speed" />
-        <SdStatTile dark v="3.8" u="m" k="Height" />
+        <SdStatTile dark :v="throw_?.rpm ?? 1320" :k="t('discs.throwDetail.rpm')" />
+        <SdStatTile dark :v="speed" :u="speedU" :k="t('discs.throwDetail.speed')" />
+        <SdStatTile dark :v="height" :u="heightU" :k="t('discs.throwDetail.height')" />
       </div>
 
       <!-- Flight path visualization -->
@@ -59,26 +74,26 @@ const throw_ = computed(() =>
           <circle cx="20" cy="190" r="6" fill="#dec38c" />
           <circle cx="320" cy="130" r="6" fill="#fff" />
         </svg>
-        <span class="flight__lbl flight__lbl--start">Release</span>
-        <span class="flight__lbl flight__lbl--end">Catch · 41 m</span>
+        <span class="flight__lbl flight__lbl--start">{{ t('discs.throwDetail.release') }}</span>
+        <span class="flight__lbl flight__lbl--end">{{ t('discs.throwDetail.catch', { distance: catchLabel }) }}</span>
       </div>
 
       <!-- Secondary stats -->
       <div class="stat-row">
-        <SdStatTile dark v="3.1" u="s" k="Hang time" />
-        <SdStatTile dark v="18°" k="Launch" />
-        <SdStatTile dark v="41" u="m" k="Distance" />
+        <SdStatTile dark v="3.1" u="s" :k="t('discs.throwDetail.hangTime')" />
+        <SdStatTile dark v="18°" :k="t('discs.throwDetail.launch')" />
+        <SdStatTile dark :v="distance" :u="distanceU" :k="t('discs.throwDetail.distance')" />
       </div>
 
       <!-- Actions -->
       <div class="throw-actions">
         <SdBtn variant="dark-glass" size="md">
           <template #icon-left><Star :size="16" :stroke-width="1.75" /></template>
-          Favorite
+          {{ t('discs.throwDetail.favorite') }}
         </SdBtn>
         <SdBtn variant="gold" size="md" block>
           <template #icon-left><Share2 :size="16" :stroke-width="1.75" /></template>
-          Share
+          {{ t('discs.throwDetail.share') }}
         </SdBtn>
       </div>
     </div>

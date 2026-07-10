@@ -1,5 +1,8 @@
 <script setup>
 import { Star } from 'lucide-vue-next'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 defineProps({
   name:     { type: String, required: true },
@@ -27,7 +30,7 @@ defineProps({
       <div class="throw-row__time">{{ time }}</div>
     </div>
     <div class="throw-row__metric">
-      {{ rpm }}<small>RPM</small>
+      {{ rpm }}<small>{{ t('discs.throws.rpm') }}</small>
     </div>
   </div>
 </template>

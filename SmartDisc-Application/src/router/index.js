@@ -101,30 +101,6 @@ const routes = [
     component: () => import('@/views/settings/SettingsView.vue'),
     meta: { requiresAuth: true },
   },
-  {
-    path: '/settings/account',
-    name: 'settings-account',
-    component: () => import('@/views/settings/AccountSecurityView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/settings/notifications',
-    name: 'settings-notifications',
-    component: () => import('@/views/settings/NotificationsPrefsView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/settings/appearance',
-    name: 'settings-appearance',
-    component: () => import('@/views/settings/AppearanceView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/settings/help',
-    name: 'settings-help',
-    component: () => import('@/views/settings/HelpSupportView.vue'),
-    meta: { requiresAuth: true },
-  },
 
   // ── Global screens ─────────────────────────────────────────────────────
   {
@@ -137,6 +113,12 @@ const routes = [
     path: '/search',
     name: 'search',
     component: () => import('@/views/SearchView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/friends',
+    name: 'friends',
+    component: () => import('@/views/friends/FriendsView.vue'),
     meta: { requiresAuth: true },
   },
 

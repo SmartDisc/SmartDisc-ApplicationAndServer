@@ -36,7 +36,7 @@ export function sanitizeEmail(value) {
 }
 
 /**
- * Disc UUIDs — alphanumeric and hyphens only (SD-XXXX-XXXX-XXXX format).
+ * Disc UUIDs — alphanumeric and hyphens only (RFC 4122 format).
  */
 export function sanitizeUUID(value) {
   return String(value)

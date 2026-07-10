@@ -101,9 +101,6 @@ watch(() => props.modelValue, (open) => {
           <div class="sheet-pill" />
           <div class="sheet-header">
             <span class="sheet-title">{{ title }}</span>
-            <button class="sheet-close" @click="close">
-              <X :size="18" :stroke-width="1.75" />
-            </button>
           </div>
         </div>
 
@@ -175,7 +172,7 @@ watch(() => props.modelValue, (open) => {
   flex: 1;
   font-family: var(--sd-font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 17px;
   color: var(--sd-fg1);
 }
 

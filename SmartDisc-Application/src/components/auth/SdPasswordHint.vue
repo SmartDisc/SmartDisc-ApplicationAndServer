@@ -2,17 +2,19 @@
 import { computed } from 'vue'
 import { Check, X } from 'lucide-vue-next'
 import { passwordRules } from '@/utils/validate'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   value: { type: String, default: '' },
 })
 
-const rules = computed(() => passwordRules(props.value))
+const { t } = useI18n()
+const rules = computed(() => passwordRules(props.value, t))
 </script>
 
 <template>
   <div class="hint">
-    <p class="hint__title">Password requirements</p>
+    <p class="hint__title">{{ t('passwordHint.title') }}</p>
     <ul class="hint__list">
       <li
         v-for="rule in rules"

@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Sign in — SmartDisc Admin{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+{% endblock %}
+
+{% block body %}
+    <div class="admin-login-shell">
+        <div class="admin-login-card">
+            <div class="admin-login-brand">
+                <span class="admin-login-brand__mark"></span>
+                <span class="admin-login-brand__text">SmartDisc</span>
+            </div>
+            <p class="admin-login-title">Admin sign in</p>
+            <p class="admin-login-sub">Restricted to accounts with the admin role.</p>
+
+            {% if error %}
+                <div class="admin-flash admin-flash--error">Invalid email or password.</div>
+            {% endif %}
+
+            <form class="admin-form" method="post" action="{{ path('app_admin_login') }}">
+                <div>
+                    <label for="username">Email</label>
+                    <input type="email" id="username" name="_username" value="{{ last_username }}" autocomplete="email" required autofocus>
+                </div>
+                <div>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="_password" autocomplete="current-password" required>
+                </div>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                <button class="admin-btn" type="submit">Sign in</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

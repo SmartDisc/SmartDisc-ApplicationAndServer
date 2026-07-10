@@ -4,11 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import SdThrowRow from '@/components/discs/SdThrowRow.vue'
 import { SdChip } from '@/components/ui'
 import { Star, Calendar } from 'lucide-vue-next'
-import { useDiscs } from '@/composables/useDiscs'
+import { useDiscs, formatThrowTime } from '@/composables/useDiscs'
+import { usePreferences } from '@/composables/usePreferences'
+import { useI18n } from '@/i18n'
 
 const route  = useRoute()
 const router = useRouter()
 const { getDisc } = useDiscs()
+const { speedUnit } = usePreferences()
+const { t } = useI18n()
 
 const disc = computed(() => getDisc(route.params.id))
 </script>
@@ -19,30 +23,30 @@ const disc = computed(() => getDisc(route.params.id))
     <div class="throws-filters">
       <SdChip tone="solid-light">
         <template #icon><Star :size="12" /></template>
-        Favorites
+        {{ t('discs.throws.favorites') }}
       </SdChip>
       <SdChip tone="solid-light">
         <template #icon><Calendar :size="12" /></template>
-        Today
+        {{ t('discs.throws.today') }}
       </SdChip>
-      <span class="throws-filters__sort">Newest first</span>
+      <span class="throws-filters__sort">{{ t('discs.throws.newestFirst') }}</span>
     </div>
 
     <div class="throws-list">
       <SdThrowRow
-        v-for="t in disc?.throws_list ?? []"
-        :key="t.id"
-        :name="t.name"
-        :time="t.time"
-        :rpm="t.rpm"
-        :fav="t.fav"
-        :auto="t.auto"
-        @click="router.push(`/discs/${route.params.id}/throw/${t.id}`)"
+        v-for="thr in disc?.throws_list ?? []"
+        :key="thr.id"
+        :name="thr.name"
+        :time="formatThrowTime(t, speedUnit, thr)"
+        :rpm="thr.rpm"
+        :fav="thr.fav"
+        :auto="thr.auto"
+        @click="router.push(`/discs/${route.params.id}/throw/${thr.id}`)"
       />
     </div>
 
     <div v-if="!disc?.throws_list?.length" class="throws-empty">
-      No throws yet — go throw this disc!
+      {{ t('discs.throws.empty') }}
     </div>
   </div>
 </template>

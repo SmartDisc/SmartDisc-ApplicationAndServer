@@ -11,13 +11,13 @@ async function bootstrap() {
   const pinia = createPinia()
 
   app.use(pinia)
-  app.use(router)
 
   // Restore a persisted session (if any) before the router resolves the
   // first navigation, so route guards see the correct auth state instead
   // of briefly treating a signed-in user as a guest.
   await useAuthStore().init()
 
+  app.use(router)
   app.mount('#app')
 }
 

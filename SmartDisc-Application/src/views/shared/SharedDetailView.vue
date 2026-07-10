@@ -7,12 +7,19 @@ import SdAppBar from '@/components/ui/SdAppBar.vue'
 import SdStatTile from '@/components/ui/SdStatTile.vue'
 import SdThrowRow from '@/components/discs/SdThrowRow.vue'
 import { SdChip, SdCard, SdIconBtn, SdSectionLabel } from '@/components/ui'
-import { useDiscs } from '@/composables/useDiscs'
+import { useDiscs, formatThrowTime } from '@/composables/useDiscs'
+import { usePreferences } from '@/composables/usePreferences'
+import { useI18n } from '@/i18n'
+import { convertDistance, distanceUnitLabel } from '@/utils/units'
 
 const route  = useRoute()
 const router = useRouter()
 const { getSharedDisc } = useDiscs()
+const { speedUnit, distanceUnit } = usePreferences()
+const { t } = useI18n()
 const disc = computed(() => getSharedDisc(route.params.id))
+const longest = computed(() => convertDistance(disc.value?.longest ?? 0, distanceUnit.value))
+const longestUnit = computed(() => distanceUnitLabel(distanceUnit.value))
 </script>
 
 <template>
@@ -30,37 +37,37 @@ const disc = computed(() => getSharedDisc(route.params.id))
       <div class="hero-top">
         <div class="hero-info">
           <div class="hero-name">{{ disc.name }}</div>
-          <div class="hero-uuid">{{ disc.uuid }} · owned by {{ disc.owner }}</div>
+          <div class="hero-uuid">{{ disc.uuid }} · {{ t('shared.detail.ownedBy', { owner: disc.owner }) }}</div>
         </div>
         <SdChip tone="read">
           <template #icon><Eye :size="12" /></template>
-          Read
+          {{ t('shared.detail.read') }}
         </SdChip>
       </div>
       <div class="stat-row">
-        <SdStatTile :v="disc.throws" k="Throws" />
-        <SdStatTile :v="disc.longest" u="m" k="Longest" />
-        <SdStatTile :v="disc.topRpm" k="Top RPM" />
+        <SdStatTile :v="disc.throws" :k="t('shared.detail.throws')" />
+        <SdStatTile :v="longest" :u="longestUnit" :k="t('shared.detail.longest')" />
+        <SdStatTile :v="disc.topRpm" :k="t('shared.detail.topRpm')" />
       </div>
     </SdCard>
 
     <!-- Throws -->
     <div class="section-header">
-      <SdSectionLabel style="flex: 1; margin: 0;">Recent throws</SdSectionLabel>
-      <span class="count">{{ disc?.throws }} total</span>
+      <SdSectionLabel style="flex: 1; margin: 0;">{{ t('shared.detail.recentThrows') }}</SdSectionLabel>
+      <span class="count">{{ disc?.throws }} {{ t('shared.detail.totalSuffix') }}</span>
     </div>
 
     <div class="throws-list">
       <SdThrowRow
-        v-for="t in disc?.throws_list ?? []"
-        :key="t.id"
-        :name="t.name"
-        :time="t.time"
-        :rpm="t.rpm"
-        :fav="t.fav"
-        :auto="t.auto"
+        v-for="thr in disc?.throws_list ?? []"
+        :key="thr.id"
+        :name="thr.name"
+        :time="formatThrowTime(t, speedUnit, thr)"
+        :rpm="thr.rpm"
+        :fav="thr.fav"
+        :auto="thr.auto"
         :readonly="true"
-        @click="router.push(`/shared/${disc.id}/throw/${t.id}`)"
+        @click="router.push(`/shared/${disc.id}/throw/${thr.id}`)"
       />
     </div>
 

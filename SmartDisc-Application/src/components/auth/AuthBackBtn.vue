@@ -1,6 +1,7 @@
 <script setup>
 import { ChevronLeft } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   /** Named route or path to navigate to. */
@@ -8,12 +9,13 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const { t } = useI18n()
 </script>
 
 <template>
   <button
     class="back-btn"
-    aria-label="Go back"
+    :aria-label="t('common.goBack')"
     @click="router.push(props.to)"
   >
     <ChevronLeft :size="20" :stroke-width="2" />

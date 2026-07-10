@@ -8,15 +8,17 @@ import { SdBtn, SdField } from '@/components/ui'
 import { useAuth } from '@/composables/useAuth'
 import { email as validateEmail } from '@/utils/validate'
 import { sanitizeEmail } from '@/utils/sanitize'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const { sendPasswordReset, isLoading, error: authError, clearError } = useAuth()
+const { t } = useI18n()
 
 const form = reactive({ email: '' })
 const errors = reactive({ email: '' })
 
 function validate() {
-  errors.email = validateEmail(form.email)
+  errors.email = validateEmail(form.email, t)
   return !errors.email
 }
 
@@ -40,19 +42,18 @@ async function handleSubmit() {
     </nav>
 
     <header class="auth-header">
-      <p class="auth-eyebrow">Reset access</p>
-      <h1 class="auth-h1">Forgot it?</h1>
+      <p class="auth-eyebrow">{{ t('auth.forgotPassword.eyebrow') }}</p>
+      <h1 class="auth-h1">{{ t('auth.forgotPassword.title') }}</h1>
       <p class="auth-sub">
-        Enter your email and we'll send a link to reset your password.
-        It expires in 30 minutes.
+        {{ t('auth.forgotPassword.subtitle') }}
       </p>
     </header>
 
     <form class="auth-form" novalidate @submit.prevent="handleSubmit">
       <SdField
         v-model="form.email"
-        label="Email"
-        placeholder="you@email.com"
+        :label="t('auth.email')"
+        :placeholder="t('auth.emailPlaceholder')"
         type="email"
         :error="errors.email"
         :disabled="isLoading"
@@ -77,7 +78,7 @@ async function handleSubmit() {
         <template #icon-left>
           <Send :size="17" :stroke-width="1.75" />
         </template>
-        {{ isLoading ? 'Sending…' : 'Send reset link' }}
+        {{ isLoading ? t('auth.forgotPassword.submitting') : t('auth.forgotPassword.submit') }}
       </SdBtn>
     </form>
 
@@ -87,10 +88,9 @@ async function handleSubmit() {
     <div class="info-card">
       <ShieldCheck :size="20" class="info-card__icon" :stroke-width="1.75" />
       <div>
-        <p class="info-card__title">Your discs stay paired</p>
+        <p class="info-card__title">{{ t('auth.forgotPassword.infoTitle') }}</p>
         <p class="info-card__body">
-          Resetting your password doesn't touch any paired disc or shared
-          access.
+          {{ t('auth.forgotPassword.infoBody') }}
         </p>
       </div>
     </div>

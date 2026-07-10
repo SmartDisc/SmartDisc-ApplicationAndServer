@@ -16,7 +16,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -28,9 +27,6 @@ class UserController extends AbstractController
 {
     public function __construct(
         private readonly ValidatorInterface $validator,
-        private readonly RateLimiterFactoryInterface $registrationLimiter,
-        private readonly RateLimiterFactoryInterface $changePasswordLimiter,
-        private readonly RateLimiterFactoryInterface $deleteAccountLimiter,
     ) {
     }
 
@@ -42,17 +38,6 @@ class UserController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         JWTTokenManagerInterface $jwtManager,
     ): JsonResponse {
-        $limit = $this->registrationLimiter->create($request->getClientIp())->consume();
-        if (!$limit->isAccepted()) {
-            $retryAfterSeconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
-
-            return $this->json(
-                ['error' => 'Too many registration attempts. Please try again later.'],
-                Response::HTTP_TOO_MANY_REQUESTS,
-                ['Retry-After' => (string) $retryAfterSeconds],
-            );
-        }
-
         try {
             $data = $request->toArray();
         } catch (JsonException) {
@@ -103,8 +88,8 @@ class UserController extends AbstractController
     #[Route('/login', name: 'app_login', methods: ['POST'])]
     public function login(): never
     {
-        // Intercepted by the "login" firewall's json_login listener (with login_throttling)
-        // before this is ever reached.
+        // Intercepted by the "login" firewall's json_login listener before this
+        // is ever reached.
         throw new LogicException('This should never be reached.');
     }
 
@@ -115,6 +100,7 @@ class UserController extends AbstractController
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'name' => $user->getName(),
+            'roles' => $user->getRoles(),
         ]);
     }
 
@@ -125,17 +111,6 @@ class UserController extends AbstractController
         EntityManagerInterface $entityManager,
         UserPasswordHasherInterface $passwordHasher,
     ): JsonResponse {
-        $limit = $this->changePasswordLimiter->create($user->getUserIdentifier())->consume();
-        if (!$limit->isAccepted()) {
-            $retryAfterSeconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
-
-            return $this->json(
-                ['error' => 'Too many attempts. Please try again later.'],
-                Response::HTTP_TOO_MANY_REQUESTS,
-                ['Retry-After' => (string) $retryAfterSeconds],
-            );
-        }
-
         try {
             $data = $request->toArray();
         } catch (JsonException) {
@@ -180,17 +155,6 @@ class UserController extends AbstractController
         EntityManagerInterface $entityManager,
         UserPasswordHasherInterface $passwordHasher,
     ): JsonResponse {
-        $limit = $this->deleteAccountLimiter->create($user->getUserIdentifier())->consume();
-        if (!$limit->isAccepted()) {
-            $retryAfterSeconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
-
-            return $this->json(
-                ['error' => 'Too many attempts. Please try again later.'],
-                Response::HTTP_TOO_MANY_REQUESTS,
-                ['Retry-After' => (string) $retryAfterSeconds],
-            );
-        }
-
         try {
             $data = $request->toArray();
         } catch (JsonException) {

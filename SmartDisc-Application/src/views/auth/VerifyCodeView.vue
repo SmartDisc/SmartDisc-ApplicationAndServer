@@ -6,9 +6,11 @@ import AuthLayout from '@/layouts/AuthLayout.vue'
 import AuthBackBtn from '@/components/auth/AuthBackBtn.vue'
 import { SdBtn, SdOtpInput } from '@/components/ui'
 import { useAuth } from '@/composables/useAuth'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const { pendingVerification, verify, resendCode, isLoading, error: authError, clearError } = useAuth()
+const { t } = useI18n()
 
 // ── OTP state ──────────────────────────────────────────────────────────────
 const code = ref('')
@@ -70,10 +72,10 @@ onUnmounted(() => clearInterval(timer))
       <div class="verify-icon">
         <ShieldCheck :size="40" :stroke-width="1.5" />
       </div>
-      <p class="auth-eyebrow">Verification</p>
-      <h1 class="auth-h1">Check your inbox.</h1>
+      <p class="auth-eyebrow">{{ t('auth.verify.eyebrow') }}</p>
+      <h1 class="auth-h1">{{ t('auth.verify.title') }}</h1>
       <p class="auth-sub">
-        We sent a 6-digit code to<br />
+        {{ t('auth.verify.subtitle') }}<br />
         <strong class="verify-email">{{ pendingVerification?.email }}</strong>
       </p>
     </div>
@@ -94,17 +96,17 @@ onUnmounted(() => clearInterval(timer))
         :disabled="code.length < 6 || isLoading"
         @click="handleVerify"
       >
-        {{ isLoading ? 'Verifying…' : 'Verify' }}
+        {{ isLoading ? t('auth.verify.submitting') : t('auth.verify.submit') }}
       </SdBtn>
 
       <p class="resend-text">
-        Didn't get it?
+        {{ t('auth.verify.didntGetIt') }}
         <button
           class="resend-btn"
           :disabled="!canResend"
           @click="handleResend"
         >
-          {{ canResend ? 'Resend code' : `Resend in ${countdownLabel}` }}
+          {{ canResend ? t('auth.verify.resendCode') : t('auth.verify.resendIn', { time: countdownLabel }) }}
         </button>
       </p>
     </div>

@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -34,6 +36,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 50)]
     private ?string $name = null;
+
+    /**
+     * @var Collection<int, Disc>
+     */
+    #[ORM\ManyToMany(targetEntity: Disc::class, mappedBy: 'sharedPeople')]
+    private Collection $discs;
+
+    public function __construct()
+    {
+        $this->discs = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -118,6 +131,33 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Disc>
+     */
+    public function getDiscs(): Collection
+    {
+        return $this->discs;
+    }
+
+    public function addDisc(Disc $disc): static
+    {
+        if (!$this->discs->contains($disc)) {
+            $this->discs->add($disc);
+            $disc->addSharedPerson($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDisc(Disc $disc): static
+    {
+        if ($this->discs->removeElement($disc)) {
+            $disc->removeSharedPerson($this);
+        }
 
         return $this;
     }

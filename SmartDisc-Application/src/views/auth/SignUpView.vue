@@ -9,21 +9,23 @@ import SdPasswordHint from '@/components/auth/SdPasswordHint.vue'
 import { useAuth } from '@/composables/useAuth'
 import { email as validateEmail, password as validatePassword, required } from '@/utils/validate'
 import { sanitizeName, sanitizeEmail, sanitizePassword } from '@/utils/sanitize'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const { signUp, isLoading, error: authError, clearError } = useAuth()
+const { t } = useI18n()
 
 const form   = reactive({ name: '', email: '', password: '', confirm: '' })
 const errors = reactive({ name: '', email: '', password: '', confirm: '' })
 const showHint = ref(false)
 
 function validate() {
-  errors.name     = form.name.trim().length >= 2 ? '' : 'Full name must be at least 2 characters'
-  errors.email    = validateEmail(form.email)
-  errors.password = validatePassword(form.password)
+  errors.name     = form.name.trim().length >= 2 ? '' : t('validate.nameTooShort')
+  errors.email    = validateEmail(form.email, t)
+  errors.password = validatePassword(form.password, t)
   errors.confirm  = form.confirm !== form.password
-    ? 'Passwords do not match'
-    : required(form.confirm, 'Confirm password')
+    ? t('validate.passwordsNoMatch')
+    : required(form.confirm, t('validate.confirmPasswordLabel'), t)
   return !errors.name && !errors.email && !errors.password && !errors.confirm
 }
 
@@ -46,18 +48,18 @@ async function handleSubmit() {
     </nav>
 
     <header class="auth-header">
-      <p class="auth-eyebrow">Create account</p>
-      <h1 class="auth-h1">Hi there.</h1>
+      <p class="auth-eyebrow">{{ t('auth.signUp.eyebrow') }}</p>
+      <h1 class="auth-h1">{{ t('auth.signUp.title') }}</h1>
       <p class="auth-sub">
-        A SmartDisc account lets you pair discs and review every throw.
+        {{ t('auth.signUp.subtitle') }}
       </p>
     </header>
 
     <form class="auth-form" novalidate @submit.prevent="handleSubmit">
       <SdField
         v-model="form.name"
-        label="Full name"
-        placeholder="Alex Rivera"
+        :label="t('auth.fullName')"
+        :placeholder="t('auth.fullNamePlaceholder')"
         autocomplete="name"
         :error="errors.name"
         :disabled="isLoading"
@@ -70,8 +72,8 @@ async function handleSubmit() {
 
       <SdField
         v-model="form.email"
-        label="Email"
-        placeholder="you@email.com"
+        :label="t('auth.email')"
+        :placeholder="t('auth.emailPlaceholder')"
         type="email"
         autocomplete="username"
         :error="errors.email"
@@ -87,8 +89,8 @@ async function handleSubmit() {
       <div class="password-wrap">
         <SdField
           v-model="form.password"
-          label="Password"
-          placeholder="password"
+          :label="t('auth.password')"
+          :placeholder="t('auth.passwordPlaceholder')"
           type="password"
           autocomplete="new-password"
           :error="errors.password"
@@ -104,7 +106,7 @@ async function handleSubmit() {
               class="info-btn"
               :class="{ 'info-btn--active': showHint }"
               @click="showHint = !showHint"
-              :aria-label="showHint ? 'Hide password rules' : 'Show password rules'"
+              :aria-label="showHint ? t('auth.hidePasswordRules') : t('auth.showPasswordRules')"
             >
               <Info :size="16" :stroke-width="1.75" />
             </button>
@@ -116,8 +118,8 @@ async function handleSubmit() {
       <!-- Confirm password -->
       <SdField
         v-model="form.confirm"
-        label="repeat password"
-        placeholder="repeat your password"
+        :label="t('auth.repeatPassword')"
+        :placeholder="t('auth.repeatPasswordPlaceholder')"
         type="password"
         autocomplete="new-password"
         :error="errors.confirm"
@@ -140,21 +142,21 @@ async function handleSubmit() {
         block
         :disabled="isLoading"
       >
-        {{ isLoading ? 'Creating account…' : 'Create account' }}
+        {{ isLoading ? t('auth.signUp.submitting') : t('auth.signUp.submit') }}
       </SdBtn>
 
       <p class="sign-up__legal">
-        By creating an account you agree to the SmartDisc
-        <a href="#" class="sign-up__legal-link">Terms</a> and
-        <a href="#" class="sign-up__legal-link">Privacy Policy</a>.
+        {{ t('auth.signUp.legalPrefix') }}
+        <a href="#" class="sign-up__legal-link">{{ t('auth.signUp.terms') }}</a> {{ t('auth.signUp.legalAnd') }}
+        <a href="#" class="sign-up__legal-link">{{ t('auth.signUp.privacyPolicy') }}</a>.
       </p>
     </form>
 
     <div class="auth-spacer" />
 
     <footer class="auth-footer">
-      Already have one?
-      <RouterLink to="/sign-in" class="auth-footer__link">Sign in</RouterLink>
+      {{ t('auth.signUp.alreadyHaveOne') }}
+      <RouterLink to="/sign-in" class="auth-footer__link">{{ t('auth.signUp.signInLink') }}</RouterLink>
     </footer>
   </AuthLayout>
 </template>

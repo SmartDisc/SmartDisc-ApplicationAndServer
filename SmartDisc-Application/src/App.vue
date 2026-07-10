@@ -25,6 +25,15 @@ body {
   height: 100%;
 }
 
+/* Hide scrollbars everywhere while keeping content scrollable */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / legacy Edge */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, newer Edge */
+}
+
 /* Remove tap highlight on all interactive elements */
 a, button, [role="button"], input, select, textarea {
   -webkit-tap-highlight-color: transparent;

@@ -1,13 +1,15 @@
 <!-- Temporary placeholder for routes not yet implemented. Remove when the real view is built. -->
 <script setup>
 import { useRoute } from 'vue-router'
+import { useI18n } from '@/i18n'
 const route = useRoute()
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="placeholder">
     <p class="placeholder__label">{{ route.name }}</p>
-    <h1 class="placeholder__title">Coming soon</h1>
+    <h1 class="placeholder__title">{{ t('placeholder.title') }}</h1>
   </div>
 </template>
 

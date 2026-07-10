@@ -22,13 +22,13 @@ defineProps({
 
 <style scoped>
 .app-wrap {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: var(--sd-paper);
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .app-blooms {
@@ -73,6 +73,9 @@ defineProps({
   width: 100%;
   max-width: 390px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   padding: 0 22px;
@@ -82,6 +85,7 @@ defineProps({
 .app-tabbar-wrap {
   position: relative;
   z-index: 1;
+  flex: none;
   width: 100%;
   max-width: 390px;
   padding-bottom: env(safe-area-inset-bottom, 0);

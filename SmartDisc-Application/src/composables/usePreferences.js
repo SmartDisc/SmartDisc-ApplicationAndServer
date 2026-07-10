@@ -16,24 +16,15 @@ function persist(data) {
 }
 
 const _stored       = load()
-const _language     = ref(_stored?.language     ?? null)
-const _theme        = ref(_stored?.theme        ?? null)
+const _language     = ref(_stored?.language     ?? 'en')
 const _distanceUnit = ref(_stored?.distanceUnit ?? 'm')
 const _speedUnit    = ref(_stored?.speedUnit    ?? 'km/h')
 
-function applyTheme(theme) {
-  if (!theme) return
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  const dark = theme === 'dark' || (theme === 'system' && prefersDark)
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-}
-
-if (_theme.value) applyTheme(_theme.value)
+document.documentElement.setAttribute('lang', _language.value)
 
 function snapshot() {
   return {
     language:     _language.value,
-    theme:        _theme.value,
     distanceUnit: _distanceUnit.value,
     speedUnit:    _speedUnit.value,
   }
@@ -43,12 +34,7 @@ export function usePreferences() {
   function saveLanguage(lang) {
     _language.value = lang
     persist(snapshot())
-  }
-
-  function saveTheme(theme) {
-    _theme.value = theme
-    persist(snapshot())
-    applyTheme(theme)
+    document.documentElement.setAttribute('lang', lang)
   }
 
   function saveDistanceUnit(unit) {
@@ -63,11 +49,9 @@ export function usePreferences() {
 
   return {
     language:     readonly(_language),
-    theme:        readonly(_theme),
     distanceUnit: readonly(_distanceUnit),
     speedUnit:    readonly(_speedUnit),
     saveLanguage,
-    saveTheme,
     saveDistanceUnit,
     saveSpeedUnit,
   }
