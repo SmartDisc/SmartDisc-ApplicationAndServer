@@ -1,14 +1,14 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { UserPlus, UserCheck, Share2, CheckCircle2, CheckCheck, Check, X, Loader2 } from 'lucide-vue-next'
+import {ref, computed, onMounted} from 'vue'
+import {useRouter} from 'vue-router'
+import {UserPlus, UserCheck, Share2, CheckCircle2, CheckCheck, Check, X, Loader2} from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SdAppBar from '@/components/ui/SdAppBar.vue'
-import { useNotifications, bucketNotificationDate } from '@/composables/useNotifications'
-import { useFriends } from '@/composables/useFriends'
-import { useDiscInvitations } from '@/composables/useDiscInvitations'
-import { mapAuthError } from '@/stores/auth'
-import { useI18n } from '@/i18n'
+import {useNotifications, bucketNotificationDate} from '@/composables/useNotifications'
+import {useFriends} from '@/composables/useFriends'
+import {useDiscInvitations} from '@/composables/useDiscInvitations'
+import {mapAuthError} from '@/stores/auth'
+import {useI18n} from '@/i18n'
 
 const router = useRouter()
 const {
@@ -20,15 +20,34 @@ const {
   markRead,
   markAllRead,
 } = useNotifications()
-const { acceptRequest, declineRequest } = useFriends()
-const { acceptInvitation, declineInvitation } = useDiscInvitations()
-const { t, language } = useI18n()
+const {requests, acceptRequest, declineRequest, fetchRequests} = useFriends()
+const {myInvites, acceptInvitation, declineInvitation, fetchMyInvitations} = useDiscInvitations()
+const {t, language} = useI18n()
 
 onMounted(() => {
   fetchNotifications().catch(() => {
     // notificationsError already holds a friendly message for the template
   })
+  // Load the real pending-state lists too, so button-gating reflects the true
+  // friendship/invitation state regardless of which view the user came from
+  // (a request resolved on the Friends page must not still show live buttons
+  // here). Each fetch is independently guarded so one failing doesn't block
+  // the others.
+  fetchRequests().catch(() => {})
+  fetchMyInvitations().catch(() => {})
 })
+
+// A friend_request / disc_invitation notification row is a permanent historical
+// record on the backend — it keeps coming back from fetchNotifications() even
+// after the underlying friendship/invitation is resolved. So we can't trust the
+// notification alone to decide whether accept/decline is still actionable; we
+// check it against the live singleton pending lists (shared app-wide), which any
+// view — Friends page, disc People page, or this inbox — keeps in sync.
+function isStillPending(n) {
+  if (n.type === 'friend_request') return requests.value.some(r => r.id === n.data.friendshipId)
+  if (n.type === 'disc_invitation') return myInvites.value.some(i => i.id === n.data.invitationId)
+  return false
+}
 
 // ── Accept/decline a friend request or disc-share invitation inline,
 // without leaving the inbox. A friend_request is keyed by its friendshipId,
@@ -56,9 +75,10 @@ async function handleAcceptRequest(n) {
   try {
     await acceptRequest(id)
     resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {})
+    if (!n.read) markRead(n.id).catch(() => {
+    })
   } catch (err) {
-    respondErrors.value = { ...respondErrors.value, [key]: mapAuthError(err) }
+    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
   } finally {
     respondingId.value = null
   }
@@ -73,9 +93,10 @@ async function handleDeclineRequest(n) {
   try {
     await declineRequest(id)
     resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {})
+    if (!n.read) markRead(n.id).catch(() => {
+    })
   } catch (err) {
-    respondErrors.value = { ...respondErrors.value, [key]: mapAuthError(err) }
+    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
   } finally {
     respondingId.value = null
   }
@@ -90,9 +111,10 @@ async function handleAcceptInvitation(n) {
   try {
     await acceptInvitation(id)
     resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {})
+    if (!n.read) markRead(n.id).catch(() => {
+    })
   } catch (err) {
-    respondErrors.value = { ...respondErrors.value, [key]: mapAuthError(err) }
+    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
   } finally {
     respondingId.value = null
   }
@@ -107,9 +129,10 @@ async function handleDeclineInvitation(n) {
   try {
     await declineInvitation(id)
     resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {})
+    if (!n.read) markRead(n.id).catch(() => {
+    })
   } catch (err) {
-    respondErrors.value = { ...respondErrors.value, [key]: mapAuthError(err) }
+    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
   } finally {
     respondingId.value = null
   }
@@ -122,25 +145,25 @@ const NOTIF_META = {
   friend_request: {
     icon: UserPlus,
     tone: 'gold',
-    title: d => t('notifications.inbox.friendRequestTitle', { name: d.fromName }),
+    title: d => t('notifications.inbox.friendRequestTitle', {name: d.fromName}),
     desc: () => t('notifications.inbox.friendRequestDesc'),
   },
   friend_accepted: {
     icon: UserCheck,
     tone: 'glass',
-    title: d => t('notifications.inbox.friendAcceptedTitle', { name: d.byName }),
+    title: d => t('notifications.inbox.friendAcceptedTitle', {name: d.byName}),
     desc: () => t('notifications.inbox.friendAcceptedDesc'),
   },
   disc_invitation: {
     icon: Share2,
     tone: 'gold',
-    title: d => t('notifications.inbox.discInvitationTitle', { name: d.fromName, disc: d.discName }),
+    title: d => t('notifications.inbox.discInvitationTitle', {name: d.fromName, disc: d.discName}),
     desc: () => t('notifications.inbox.discInvitationDesc'),
   },
   disc_invitation_accepted: {
     icon: CheckCircle2,
     tone: 'glass',
-    title: d => t('notifications.inbox.joinedTitle', { name: d.byName, disc: d.discName }),
+    title: d => t('notifications.inbox.joinedTitle', {name: d.byName, disc: d.discName}),
     desc: () => t('notifications.inbox.discInvitationAcceptedDesc'),
   },
 }
@@ -157,25 +180,26 @@ const groups = computed(() => {
   const byLabel = new Map()
 
   for (const n of notifications.value) {
-    const { dayKey, dateLabel, clock } = bucketNotificationDate(n.createdAt, language.value)
+    const {dayKey, dateLabel, clock} = bucketNotificationDate(n.createdAt, language.value)
     const label = dayKey === 'today'
-      ? t('notifications.inbox.today')
-      : dayKey === 'yesterday'
-        ? t('notifications.inbox.yesterday')
-        : dateLabel
+        ? t('notifications.inbox.today')
+        : dayKey === 'yesterday'
+            ? t('notifications.inbox.yesterday')
+            : dateLabel
 
     if (!byLabel.has(label)) {
       byLabel.set(label, [])
       order.push(label)
     }
-    byLabel.get(label).push({ ...n, clock })
+    byLabel.get(label).push({...n, clock})
   }
 
-  return order.map(label => ({ label, items: byLabel.get(label) }))
+  return order.map(label => ({label, items: byLabel.get(label)}))
 })
 
 function onNotifClick(n) {
-  if (!n.read) markRead(n.id).catch(() => {})
+  if (!n.read) markRead(n.id).catch(() => {
+  })
   // disc_invitation_accepted fires for the disc's OWNER, who can manage
   // access there. disc_invitation (like friend_request) is handled inline
   // via its accept/decline buttons, so clicking the row just marks it read.
@@ -189,7 +213,8 @@ function onNotifClick(n) {
 }
 
 function onMarkAllRead() {
-  markAllRead().catch(() => {})
+  markAllRead().catch(() => {
+  })
 }
 </script>
 
@@ -198,7 +223,7 @@ function onMarkAllRead() {
     <SdAppBar back :title="t('notifications.inbox.title')">
       <template #action>
         <button class="mark-all" :disabled="unreadCount === 0" @click="onMarkAllRead">
-          <CheckCheck :size="14" :stroke-width="2.25" />
+          <CheckCheck :size="14" :stroke-width="2.25"/>
           <span>{{ t('notifications.inbox.markAllRead') }}</span>
         </button>
       </template>
@@ -210,11 +235,10 @@ function onMarkAllRead() {
       <p v-if="notificationsError" class="notif-error">{{ notificationsError }}</p>
 
       <div v-else-if="notifications.length === 0" class="notif-empty">
-        <div class="notif-empty__icon">
-          <CheckCircle2 :size="26" :stroke-width="1.75" />
+        <div>
+          <p class="notif-empty__title">{{ t('notifications.inbox.emptyTitle') }}</p>
+          <p class="notif-empty__body">{{ t('notifications.inbox.emptyBody') }}</p>
         </div>
-        <p class="notif-empty__title">{{ t('notifications.inbox.emptyTitle') }}</p>
-        <p class="notif-empty__body">{{ t('notifications.inbox.emptyBody') }}</p>
       </div>
 
       <template v-else>
@@ -222,17 +246,17 @@ function onMarkAllRead() {
           <p class="day-label">{{ group.label }}</p>
 
           <div
-            v-for="n in group.items"
-            :key="n.id"
-            :class="['notif', { 'notif--unread': !n.read }]"
-            @click="onNotifClick(n)"
+              v-for="n in group.items"
+              :key="n.id"
+              :class="['notif', { 'notif--unread': !n.read }]"
+              @click="onNotifClick(n)"
           >
-            <div :class="['notif__dot', { 'notif__dot--read': n.read }]" />
+            <div :class="['notif__dot', { 'notif__dot--read': n.read }]"/>
             <div :class="['notif__avatar', `notif__avatar--${metaFor(n).tone}`]">
               <component
-                :is="metaFor(n).icon"
-                :size="18"
-                :style="{ color: metaFor(n).tone === 'gold' ? '#5a4416' : 'var(--sd-ink)' }"
+                  :is="metaFor(n).icon"
+                  :size="18"
+                  :style="{ color: metaFor(n).tone === 'gold' ? '#5a4416' : 'var(--sd-ink)' }"
               />
             </div>
             <div class="notif__body">
@@ -245,38 +269,38 @@ function onMarkAllRead() {
             </div>
 
             <div
-              v-if="(n.type === 'friend_request' || n.type === 'disc_invitation') && !resolvedRequests.has(respondKey(n))"
-              class="notif__actions"
-              @click.stop
+                v-if="(n.type === 'friend_request' || n.type === 'disc_invitation') && isStillPending(n) && !resolvedRequests.has(respondKey(n))"
+                class="notif__actions"
+                @click.stop
             >
               <button
-                class="notif-action notif-action--decline"
-                :disabled="respondingId === respondKey(n)"
-                @click="n.type === 'friend_request' ? handleDeclineRequest(n) : handleDeclineInvitation(n)"
+                  class="notif-action notif-action--decline"
+                  :disabled="respondingId === respondKey(n)"
+                  @click="n.type === 'friend_request' ? handleDeclineRequest(n) : handleDeclineInvitation(n)"
               >
                 <Loader2
-                  v-if="respondingId === respondKey(n)"
-                  :size="15"
-                  class="spin-icon"
+                    v-if="respondingId === respondKey(n)"
+                    :size="15"
+                    class="spin-icon"
                 />
-                <X v-else :size="15" />
+                <X v-else :size="15"/>
               </button>
               <button
-                class="notif-action notif-action--accept"
-                :disabled="respondingId === respondKey(n)"
-                @click="n.type === 'friend_request' ? handleAcceptRequest(n) : handleAcceptInvitation(n)"
+                  class="notif-action notif-action--accept"
+                  :disabled="respondingId === respondKey(n)"
+                  @click="n.type === 'friend_request' ? handleAcceptRequest(n) : handleAcceptInvitation(n)"
               >
                 <Loader2
-                  v-if="respondingId === respondKey(n)"
-                  :size="15"
-                  class="spin-icon"
+                    v-if="respondingId === respondKey(n)"
+                    :size="15"
+                    class="spin-icon"
                 />
-                <Check v-else :size="15" />
+                <Check v-else :size="15"/>
               </button>
             </div>
             <span
-              v-else-if="(n.type === 'friend_request' || n.type === 'disc_invitation') && resolvedRequests.has(respondKey(n))"
-              class="notif__resolved"
+                v-else-if="(n.type === 'friend_request' || n.type === 'disc_invitation') && (resolvedRequests.has(respondKey(n)) || !isStillPending(n))"
+                class="notif__resolved"
             >
               {{ t('notifications.inbox.requestHandled') }}
             </span>
@@ -285,7 +309,7 @@ function onMarkAllRead() {
       </template>
     </template>
 
-    <div style="height: 40px;" />
+    <div style="height: 40px;"/>
   </AppLayout>
 </template>
 
@@ -303,18 +327,28 @@ function onMarkAllRead() {
   border: 1px solid var(--sd-glass-light-border);
   border-radius: var(--sd-r-pill);
   -webkit-backdrop-filter: var(--sd-glass-blur-thin);
-          backdrop-filter: var(--sd-glass-blur-thin);
+  backdrop-filter: var(--sd-glass-blur-thin);
   box-shadow: var(--sd-shadow-glass);
   white-space: nowrap;
   cursor: pointer;
   padding: 7px 12px;
   transition: background var(--sd-dur-fast) var(--sd-ease-out),
-              opacity var(--sd-dur-fast) var(--sd-ease-out),
-              transform var(--sd-dur-fast) var(--sd-ease-out);
+  opacity var(--sd-dur-fast) var(--sd-ease-out),
+  transform var(--sd-dur-fast) var(--sd-ease-out);
 }
-.mark-all:not(:disabled):hover { background: rgba(255,255,255,.72); }
-.mark-all:not(:disabled):active { transform: scale(0.97); }
-.mark-all:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.mark-all:not(:disabled):hover {
+  background: rgba(255, 255, 255, .72);
+}
+
+.mark-all:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.mark-all:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .day-label {
   font-family: var(--sd-font-display);
@@ -325,7 +359,10 @@ function onMarkAllRead() {
   color: var(--sd-azure);
   margin: 14px 0 4px;
 }
-.day-label:first-child { margin-top: 8px; }
+
+.day-label:first-child {
+  margin-top: 8px;
+}
 
 .notif {
   display: flex;
@@ -343,7 +380,10 @@ function onMarkAllRead() {
   margin-top: 6px;
   flex: none;
 }
-.notif__dot--read { background: transparent; }
+
+.notif__dot--read {
+  background: transparent;
+}
 
 .notif__avatar {
   width: 36px;
@@ -355,14 +395,22 @@ function onMarkAllRead() {
   justify-content: center;
   flex: none;
 }
-.notif__avatar--gold { background: var(--sd-gold-grad); }
+
+.notif__avatar--gold {
+  background: var(--sd-gold-grad);
+}
+
 .notif__avatar--glass {
   background: var(--sd-glass-light-bg);
   border: 1px solid var(--sd-glass-light-border);
   color: var(--sd-ink);
 }
 
-.notif__body { flex: 1; min-width: 0; }
+.notif__body {
+  flex: 1;
+  min-width: 0;
+}
+
 .notif__title {
   font-family: var(--sd-font-body);
   font-weight: 600;
@@ -370,6 +418,7 @@ function onMarkAllRead() {
   color: var(--sd-fg1);
   line-height: 1.25;
 }
+
 .notif__desc {
   font-family: var(--sd-font-body);
   font-size: 13px;
@@ -377,6 +426,7 @@ function onMarkAllRead() {
   margin-top: 3px;
   line-height: 1.35;
 }
+
 .notif__meta {
   font-family: var(--sd-font-display);
   font-size: 11px;
@@ -411,11 +461,17 @@ function onMarkAllRead() {
   flex: none;
   transition: opacity var(--sd-dur-fast) var(--sd-ease-out);
 }
-.notif-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.notif-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .notif-action--decline {
   background: rgba(192, 88, 78, .12);
   color: var(--sd-danger);
 }
+
 .notif-action--accept {
   background: var(--sd-gold-grad);
   color: #5a4416;
@@ -449,8 +505,10 @@ function onMarkAllRead() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 56px 24px;
+  height: 100%;
 }
 
 .notif-empty__icon {
@@ -484,9 +542,14 @@ function onMarkAllRead() {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
+
 .spin-icon {
   animation: spin 0.7s linear infinite;
 }

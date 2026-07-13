@@ -40,6 +40,14 @@ class FriendController extends AbstractController
         return $this->json(array_map($this->serializeRequest(...), $friendships));
     }
 
+    #[Route('/requests/sent', name: 'app_friends_requests_sent_list', methods: ['GET'])]
+    public function requestsSentList(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository): JsonResponse
+    {
+        $friendships = $friendshipRepository->findSentPendingFor($user);
+
+        return $this->json(array_map($this->serializeSentRequest(...), $friendships));
+    }
+
     #[Route('/requests', name: 'app_friends_requests_create', methods: ['POST'])]
     public function requestsCreate(
         Request $request,
@@ -52,26 +60,26 @@ class FriendController extends AbstractController
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_string($data['email'] ?? null)) {
-            return $this->json(['error' => 'email is a required string.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'email is a required string.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         $email = mb_strtolower(trim($data['email']));
         $found = $userRepository->findOneBy(['email' => $email]);
 
         if (!$found instanceof User) {
-            return $this->json(['error' => 'No user found with that email.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'No user found with that email.', 'code' => 'no_user_with_email'], Response::HTTP_NOT_FOUND);
         }
 
         if ($found->getId() === $user->getId()) {
-            return $this->json(['errors' => ['email' => 'You cannot send a friend request to yourself.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['email' => 'You cannot send a friend request to yourself.'], 'code' => 'cannot_friend_self'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if (null !== $friendshipRepository->findActiveBetween($user, $found)) {
-            return $this->json(['error' => 'A friendship or pending request already exists with that user.'], Response::HTTP_CONFLICT);
+            return $this->json(['error' => 'A friendship or pending request already exists with that user.', 'code' => 'already_friends_or_pending'], Response::HTTP_CONFLICT);
         }
 
         $friendship = new Friendship();
@@ -110,7 +118,7 @@ class FriendController extends AbstractController
         $friendship = $friendshipRepository->find($id);
 
         if (!$this->isPendingRequestFor($friendship, $user)) {
-            return $this->json(['error' => 'Friend request not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Friend request not found.', 'code' => 'friend_request_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $friendship->setStatus('accepted');
@@ -137,7 +145,7 @@ class FriendController extends AbstractController
         $friendship = $friendshipRepository->find($id);
 
         if (!$this->isPendingRequestFor($friendship, $user)) {
-            return $this->json(['error' => 'Friend request not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Friend request not found.', 'code' => 'friend_request_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $friendship->setStatus('declined');
@@ -183,7 +191,7 @@ class FriendController extends AbstractController
             && ($friendship->getRequester()?->getId() === $user->getId() || $friendship->getAddressee()?->getId() === $user->getId());
 
         if (!$friendship instanceof Friendship || 'accepted' !== $friendship->getStatus() || !$isParty) {
-            return $this->json(['error' => 'Friend not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Friend not found.', 'code' => 'friend_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $entityManager->remove($friendship);
@@ -222,6 +230,19 @@ class FriendController extends AbstractController
             'fromUserId' => $from?->getId(),
             'fromName' => $from?->getName(),
             'fromEmail' => $from?->getEmail(),
+            'createdAt' => $friendship->getCreatedAt()->format(DATE_ATOM),
+        ];
+    }
+
+    private function serializeSentRequest(Friendship $friendship): array
+    {
+        $to = $friendship->getAddressee();
+
+        return [
+            'id' => $friendship->getId(),
+            'toUserId' => $to?->getId(),
+            'toName' => $to?->getName(),
+            'toEmail' => $to?->getEmail(),
             'createdAt' => $friendship->getCreatedAt()->format(DATE_ATOM),
         ];
     }

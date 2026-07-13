@@ -133,8 +133,13 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
-router.beforeEach((to) => {
-  const { isAuthenticated, pendingVerification } = useAuth()
+// Routes whose error state must never leak into one another (e.g. a stale
+// "email already exists" error from /sign-up must not still be showing after
+// the user clicks through to /sign-in without resubmitting anything).
+const AUTH_FORM_ROUTES = ['sign-in', 'sign-up']
+
+router.beforeEach((to, from) => {
+  const { isAuthenticated, pendingVerification, clearError } = useAuth()
 
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     return { name: 'welcome' }
@@ -146,6 +151,14 @@ router.beforeEach((to) => {
 
   if (to.name === 'verify' && !pendingVerification.value) {
     return { name: 'welcome' }
+  }
+
+  // Landing on the sign-in/sign-up form from any other route (including the
+  // other one of the pair) starts with a clean slate — any error still held
+  // by the shared auth store/composable is left over from a previous submit
+  // and must not bleed into the other form.
+  if (AUTH_FORM_ROUTES.includes(to.name) && to.name !== from.name) {
+    clearError()
   }
 })
 

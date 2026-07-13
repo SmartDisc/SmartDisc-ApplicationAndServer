@@ -40,7 +40,7 @@ class NotificationController extends AbstractController
         $notification = $notificationRepository->find($id);
 
         if (!$notification instanceof Notification || $notification->getRecipient()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Notification not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Notification not found.', 'code' => 'notification_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         if (null === $notification->getReadAt()) {

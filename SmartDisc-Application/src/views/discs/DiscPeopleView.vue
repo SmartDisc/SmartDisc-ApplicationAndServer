@@ -59,7 +59,7 @@ async function handleRemoveMember() {
     await removeMember(route.params.id, userId)
     removeMemberSheet.value = false
   } catch (err) {
-    removeError.value = mapAuthError(err)
+    removeError.value = mapAuthError(err, t)
   } finally {
     removingId.value = null
   }
@@ -75,7 +75,7 @@ async function handleCancelInvite(id) {
   try {
     await cancelInvitation(route.params.id, id)
   } catch (err) {
-    cancelError.value = mapAuthError(err)
+    cancelError.value = mapAuthError(err, t)
   } finally {
     cancelingId.value = null
   }
@@ -103,7 +103,7 @@ async function handleInvite(friend) {
   try {
     await inviteFriend(route.params.id, friend.id)
   } catch (err) {
-    inviteError.value = mapAuthError(err)
+    inviteError.value = mapAuthError(err, t)
   } finally {
     invitingId.value = null
   }

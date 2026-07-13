@@ -58,16 +58,16 @@ class DiscController extends AbstractController
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_string($data['name'] ?? null)) {
-            return $this->json(['error' => 'name is a required string.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'name is a required string.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         $name = trim($data['name']);
         if ('' === $name || mb_strlen($name) > 60) {
-            return $this->json(['errors' => ['name' => 'Name must be between 1 and 60 characters.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['name' => 'Name must be between 1 and 60 characters.'], 'code' => 'invalid_disc_name'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $disc = $discRepository->find($id);
@@ -75,7 +75,7 @@ class DiscController extends AbstractController
         // 404 (rather than 403) whether the disc doesn't exist or belongs to
         // someone else, so this endpoint can't be used to probe disc ownership.
         if (!$disc instanceof Disc || $disc->getOwner()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Disc not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Disc not found.', 'code' => 'disc_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $disc->setName($name);
@@ -94,22 +94,22 @@ class DiscController extends AbstractController
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_string($data['id'] ?? null) || !is_string($data['password'] ?? null)) {
-            return $this->json(['error' => 'id and password are required strings.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'id and password are required strings.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         $disc = $discRepository->find(trim($data['id']));
         $passwordValid = password_verify($data['password'], $disc?->getPassword() ?? self::DUMMY_HASH);
 
         if (!$disc instanceof Disc || !$passwordValid) {
-            return $this->json(['errors' => ['password' => 'Invalid disc UUID or password.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['password' => 'Invalid disc UUID or password.'], 'code' => 'invalid_disc_credentials'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if (null !== $disc->getOwner()) {
-            return $this->json(['errors' => ['id' => 'This disc has already been claimed.']], Response::HTTP_CONFLICT);
+            return $this->json(['errors' => ['id' => 'This disc has already been claimed.'], 'code' => 'disc_already_claimed'], Response::HTTP_CONFLICT);
         }
 
         $disc->setOwner($user);
@@ -130,7 +130,7 @@ class DiscController extends AbstractController
         // 404 (rather than 403) whether the disc doesn't exist or belongs to
         // someone else, so this endpoint can't be used to probe disc ownership.
         if (!$disc instanceof Disc || $disc->getOwner()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Disc not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Disc not found.', 'code' => 'disc_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $invitations = $discInvitationRepository->findPendingForDisc($disc);
@@ -153,27 +153,27 @@ class DiscController extends AbstractController
         $disc = $discRepository->find($id);
 
         if (!$disc instanceof Disc || $disc->getOwner()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Disc not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Disc not found.', 'code' => 'disc_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_int($data['friendId'] ?? null)) {
-            return $this->json(['error' => 'friendId is a required integer.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'friendId is a required integer.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         $friend = $userRepository->find($data['friendId']);
 
         if (!$friend instanceof User || !$friendshipRepository->isAcceptedFriend($user, $friend)) {
-            return $this->json(['error' => 'That user is not one of your friends.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'That user is not one of your friends.', 'code' => 'not_your_friend'], Response::HTTP_NOT_FOUND);
         }
 
         if ($disc->getSharedPeople()->contains($friend) || null !== $discInvitationRepository->findPendingForDiscAndUser($disc, $friend)) {
-            return $this->json(['error' => 'That user already has access to or a pending invitation for this disc.'], Response::HTTP_CONFLICT);
+            return $this->json(['error' => 'That user already has access to or a pending invitation for this disc.', 'code' => 'already_shared_or_invited'], Response::HTTP_CONFLICT);
         }
 
         $invitation = new DiscInvitation();
@@ -216,13 +216,13 @@ class DiscController extends AbstractController
         $disc = $discRepository->find($id);
 
         if (!$disc instanceof Disc || $disc->getOwner()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Disc not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Disc not found.', 'code' => 'disc_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $invitation = $discInvitationRepository->find($invitationId);
 
         if (!$invitation instanceof DiscInvitation || $invitation->getDisc()?->getId() !== $disc->getId()) {
-            return $this->json(['error' => 'Invitation not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Invitation not found.', 'code' => 'invitation_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $entityManager->remove($invitation);
@@ -240,7 +240,7 @@ class DiscController extends AbstractController
         $disc = $discRepository->find($id);
 
         if (!$disc instanceof Disc || $disc->getOwner()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Disc not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Disc not found.', 'code' => 'disc_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         return $this->json(array_map($this->serializePerson(...), $disc->getSharedPeople()->toArray()));
@@ -258,13 +258,13 @@ class DiscController extends AbstractController
         $disc = $discRepository->find($id);
 
         if (!$disc instanceof Disc || $disc->getOwner()?->getId() !== $user->getId()) {
-            return $this->json(['error' => 'Disc not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Disc not found.', 'code' => 'disc_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $person = $userRepository->find($userId);
 
         if (!$person instanceof User || !$disc->getSharedPeople()->contains($person)) {
-            return $this->json(['error' => 'That person does not have access to this disc.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'That person does not have access to this disc.', 'code' => 'person_no_disc_access'], Response::HTTP_NOT_FOUND);
         }
 
         $disc->removeSharedPerson($person);

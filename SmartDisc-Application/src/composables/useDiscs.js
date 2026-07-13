@@ -2,6 +2,7 @@ import { ref, readonly } from 'vue'
 import { formatSpeed } from '@/utils/units'
 import { apiFetch } from '@/services/api'
 import { useAuthStore, mapAuthError } from '@/stores/auth'
+import { useI18n } from '@/i18n'
 
 // Throw `time` is stored as a day key + clock time + a base speed in km/h
 // (the app's canonical unit) rather than a baked-in formatted string, so
@@ -70,6 +71,7 @@ export function formatLastActive(t, lastActive) {
 
 export function useDiscs() {
   const authStore = useAuthStore()
+  const { t } = useI18n()
 
   function getDisc(id) {
     return _discs.value.find(d => d.id === id) ?? null
@@ -86,7 +88,7 @@ export function useDiscs() {
       const discs = await apiFetch('/api/discs', { token: authStore.token })
       _discs.value = discs.map(mapDisc)
     } catch (err) {
-      _discsError.value = mapAuthError(err)
+      _discsError.value = mapAuthError(err, t)
       throw err
     } finally {
       _discsLoading.value = false
@@ -123,7 +125,7 @@ export function useDiscs() {
       const discs = await apiFetch('/api/discs/shared', { token: authStore.token })
       _sharedDiscs.value = discs.map(mapSharedDisc)
     } catch (err) {
-      _sharedDiscsError.value = mapAuthError(err)
+      _sharedDiscsError.value = mapAuthError(err, t)
       throw err
     } finally {
       _sharedDiscsLoading.value = false
