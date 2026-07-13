@@ -19,14 +19,14 @@ const pairing = ref(false)
 const pairError = ref('')
 
 async function handlePairDisc() {
-  if (!uuid.value || pairing.value) return
+  if (!uuid.value || !password.value || pairing.value) return
   pairing.value = true
   pairError.value = ''
   try {
     await claimDisc(uuid.value, password.value)
     router.push('/discs')
   } catch (err) {
-    pairError.value = mapAuthError(err)
+    pairError.value = mapAuthError(err, t)
   } finally {
     pairing.value = false
   }
@@ -36,14 +36,6 @@ async function handlePairDisc() {
 <template>
   <AppLayout :tabs="false">
     <SdAppBar back :title="t('discs.add.title')" />
-
-    <div class="add-mark">
-      <img src="/images/SmartDisc_Mark.png" alt="" />
-    </div>
-
-    <p class="add-hint">
-      {{ t('discs.add.hint') }}
-    </p>
 
     <div class="add-form">
       <SdField
@@ -66,7 +58,7 @@ async function handlePairDisc() {
         <template #icon><Lock :size="18" :stroke-width="1.75" /></template>
       </SdField>
       <p v-if="pairError" class="add-error">{{ pairError }}</p>
-      <SdBtn variant="primary" size="lg" block :disabled="!uuid || pairing" @click="handlePairDisc">
+      <SdBtn variant="primary" size="lg" block :disabled="!uuid || !password || pairing" @click="handlePairDisc">
         <template #icon-left><Check :size="18" :stroke-width="2" /></template>
         {{ pairing ? t('discs.add.pairing') : t('discs.add.pairDisc') }}
       </SdBtn>

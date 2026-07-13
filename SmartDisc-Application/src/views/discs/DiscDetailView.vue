@@ -40,7 +40,7 @@ async function handleRename() {
     await renameDisc(route.params.id, name)
     renameSheet.value = false
   } catch (err) {
-    renameError.value = mapAuthError(err)
+    renameError.value = mapAuthError(err, t)
   } finally {
     renameLoading.value = false
   }

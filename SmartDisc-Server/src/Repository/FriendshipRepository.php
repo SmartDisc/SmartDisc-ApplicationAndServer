@@ -62,6 +62,21 @@ class FriendshipRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return list<Friendship>
+     */
+    public function findSentPendingFor(User $requester): array
+    {
+        return $this->createQueryBuilder('f')
+            ->andWhere('f.requester = :requester')
+            ->andWhere('f.status = :status')
+            ->setParameter('requester', $requester)
+            ->setParameter('status', 'pending')
+            ->orderBy('f.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function isAcceptedFriend(User $a, User $b): bool
     {
         $friendship = $this->createQueryBuilder('f')

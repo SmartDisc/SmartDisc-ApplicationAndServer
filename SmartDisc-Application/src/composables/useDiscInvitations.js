@@ -1,6 +1,7 @@
 import { ref, readonly } from 'vue'
 import { apiFetch } from '@/services/api'
 import { useAuthStore, mapAuthError } from '@/stores/auth'
+import { useI18n } from '@/i18n'
 
 // Pending invites for whichever disc is currently open (owner view):
 // [{ id, toUserId, toName, toEmail, createdAt }]
@@ -22,6 +23,7 @@ const _discMembersError = ref(null)
 
 export function useDiscInvitations() {
   const authStore = useAuthStore()
+  const { t } = useI18n()
 
   /** Loads pending invites for a disc the signed-in user owns. */
   async function fetchDiscInvitations(discId) {
@@ -31,7 +33,7 @@ export function useDiscInvitations() {
       const invites = await apiFetch(`/api/discs/${discId}/invitations`, { token: authStore.token })
       _discInvites.value = invites
     } catch (err) {
-      _discInvitesError.value = mapAuthError(err)
+      _discInvitesError.value = mapAuthError(err, t)
       throw err
     } finally {
       _discInvitesLoading.value = false
@@ -66,7 +68,7 @@ export function useDiscInvitations() {
       const invites = await apiFetch('/api/disc-invitations', { token: authStore.token })
       _myInvites.value = invites
     } catch (err) {
-      _myInvitesError.value = mapAuthError(err)
+      _myInvitesError.value = mapAuthError(err, t)
       throw err
     } finally {
       _myInvitesLoading.value = false
@@ -101,7 +103,7 @@ export function useDiscInvitations() {
       const members = await apiFetch(`/api/discs/${discId}/people`, { token: authStore.token })
       _discMembers.value = members
     } catch (err) {
-      _discMembersError.value = mapAuthError(err)
+      _discMembersError.value = mapAuthError(err, t)
       throw err
     } finally {
       _discMembersLoading.value = false

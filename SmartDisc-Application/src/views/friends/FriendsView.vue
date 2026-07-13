@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import { UserPlus, Search, Check, X, UserMinus, Loader2 } from 'lucide-vue-next'
+import { UserPlus, Search, Check, X, UserMinus, Loader2, Clock } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SdAppBar from '@/components/ui/SdAppBar.vue'
 import SdAvatar from '@/components/ui/SdAvatar.vue'
@@ -14,14 +14,17 @@ const { t } = useI18n()
 const {
   friends, friendsError,
   requests,
+  sentRequests,
   searchResults, searchLoading, searchError,
-  fetchFriends, fetchRequests, searchUsers, clearSearch,
+  fetchFriends, fetchRequests, fetchSentRequests, searchUsers, clearSearch,
   sendRequest, acceptRequest, declineRequest, removeFriend,
 } = useFriends()
 
 onMounted(() => {
+  clearSearch()
   fetchFriends().catch(() => {})
   fetchRequests().catch(() => {})
+  fetchSentRequests().catch(() => {})
 })
 
 // ── Add friend: search by name/email ──────────────────────────────────────
@@ -45,8 +48,9 @@ async function handleSendRequest(user) {
     sendSuccess.value = t('friends.add.sent', { name: user.name })
     searchQuery.value = ''
     clearSearch()
+    fetchSentRequests().catch(() => {})
   } catch (err) {
-    sendError.value = mapAuthError(err)
+    sendError.value = mapAuthError(err, t)
   } finally {
     sendingId.value = null
   }
@@ -62,7 +66,7 @@ async function handleAccept(id) {
   try {
     await acceptRequest(id)
   } catch (err) {
-    requestsActionError.value = mapAuthError(err)
+    requestsActionError.value = mapAuthError(err, t)
   } finally {
     requestActionId.value = null
   }
@@ -74,7 +78,7 @@ async function handleDecline(id) {
   try {
     await declineRequest(id)
   } catch (err) {
-    requestsActionError.value = mapAuthError(err)
+    requestsActionError.value = mapAuthError(err, t)
   } finally {
     requestActionId.value = null
   }
@@ -100,7 +104,7 @@ async function handleRemove() {
     await removeFriend(removeTarget.value.friendshipId)
     removeSheet.value = false
   } catch (err) {
-    removeError.value = mapAuthError(err)
+    removeError.value = mapAuthError(err, t)
   } finally {
     removeLoading.value = false
   }
@@ -185,6 +189,27 @@ async function handleRemove() {
                 <X v-else :size="16" />
               </button>
             </div>
+          </template>
+        </SdListRow>
+      </SdList>
+    </div>
+
+    <!-- Sent requests -->
+    <div v-if="sentRequests.length" class="friends-section">
+      <SdSectionLabel>{{ t('friends.sent.label', { count: sentRequests.length }) }}</SdSectionLabel>
+      <SdList>
+        <SdListRow
+          v-for="r in sentRequests"
+          :key="r.id"
+          :title="r.toName"
+          :subtitle="r.toEmail"
+        >
+          <template #icon><SdAvatar :name="r.toName" :size="38" /></template>
+          <template #trailing>
+            <span class="pending-status">
+              <Clock :size="14" />
+              {{ t('friends.sent.pendingBadge') }}
+            </span>
           </template>
         </SdListRow>
       </SdList>
@@ -367,6 +392,18 @@ async function handleRemove() {
 .icon-action--decline {
   color: var(--sd-danger);
   border-color: rgba(192, 88, 78, .3);
+}
+
+.pending-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font-family: var(--sd-font-display);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--sd-gold-400);
+  white-space: nowrap;
 }
 
 .remove-stack {

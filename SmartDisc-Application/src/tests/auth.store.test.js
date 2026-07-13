@@ -1,3 +1,7 @@
+// @vitest-environment happy-dom
+// The auth store now localizes error messages via useI18n(), which pulls in
+// usePreferences — that reads localStorage and sets document.lang at module
+// load, so this suite needs a DOM environment.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 

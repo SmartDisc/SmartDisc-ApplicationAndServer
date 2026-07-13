@@ -1,6 +1,7 @@
 import { ref, readonly, computed } from 'vue'
 import { apiFetch } from '@/services/api'
 import { useAuthStore, mapAuthError } from '@/stores/auth'
+import { useI18n } from '@/i18n'
 
 // Notifications come from the backend as { id, type, read, createdAt, data }
 // where `createdAt` is a real ISO 8601 timestamp. `unreadCount` is derived
@@ -46,6 +47,7 @@ export function bucketNotificationDate(createdAt, locale) {
 
 export function useNotifications() {
   const authStore = useAuthStore()
+  const { t } = useI18n()
 
   const unreadCount = computed(() => _notifications.value.filter(n => !n.read).length)
 
@@ -57,7 +59,7 @@ export function useNotifications() {
       const notifications = await apiFetch('/api/notifications', { token: authStore.token })
       _notifications.value = notifications.map(mapNotification)
     } catch (err) {
-      _notificationsError.value = mapAuthError(err)
+      _notificationsError.value = mapAuthError(err, t)
       throw err
     } finally {
       _notificationsLoading.value = false
