@@ -7,6 +7,7 @@ import AuthBackBtn from '@/components/auth/AuthBackBtn.vue'
 import { SdBtn, SdField } from '@/components/ui'
 import SdPasswordHint from '@/components/auth/SdPasswordHint.vue'
 import { useAuth } from '@/composables/useAuth'
+import { useClickOutside } from '@/composables/useClickOutside'
 import { email as validateEmail, password as validatePassword, required } from '@/utils/validate'
 import { sanitizeName, sanitizeEmail, sanitizePassword } from '@/utils/sanitize'
 import { useI18n } from '@/i18n'
@@ -18,6 +19,8 @@ const { t } = useI18n()
 const form   = reactive({ name: '', email: '', password: '', confirm: '' })
 const errors = reactive({ name: '', email: '', password: '', confirm: '' })
 const showHint = ref(false)
+const passwordWrapRef = ref(null)
+useClickOutside(passwordWrapRef, () => { showHint.value = false })
 
 function validate() {
   errors.name     = form.name.trim().length >= 2 ? '' : t('validate.nameTooShort')
@@ -86,7 +89,7 @@ async function handleSubmit() {
       </SdField>
 
       <!-- Password with info toggle -->
-      <div class="password-wrap">
+      <div class="password-wrap" ref="passwordWrapRef">
         <SdField
           v-model="form.password"
           :label="t('auth.password')"
@@ -163,6 +166,7 @@ async function handleSubmit() {
 
 <style scoped>
 .password-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;

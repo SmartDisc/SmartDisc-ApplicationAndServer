@@ -1,6 +1,7 @@
 import { ref, readonly } from 'vue'
 import { apiFetch } from '@/services/api'
 import { useAuthStore, mapAuthError } from '@/stores/auth'
+import { useI18n } from '@/i18n'
 
 // Accepted friends: [{ friendshipId, id, name, email }]
 const _friends = ref([])
@@ -12,6 +13,11 @@ const _requests = ref([])
 const _requestsLoading = ref(false)
 const _requestsError = ref(null)
 
+// Outgoing pending requests: [{ id, toUserId, toName, toEmail, createdAt }]
+const _sentRequests = ref([])
+const _sentRequestsLoading = ref(false)
+const _sentRequestsError = ref(null)
+
 // Live "add friend" search results: [{ id, name, email }]
 const _searchResults = ref([])
 const _searchLoading = ref(false)
@@ -22,6 +28,7 @@ let _searchSeq = 0
 
 export function useFriends() {
   const authStore = useAuthStore()
+  const { t } = useI18n()
 
   /** Loads the signed-in user's accepted friends. */
   async function fetchFriends() {
@@ -31,7 +38,7 @@ export function useFriends() {
       const friends = await apiFetch('/api/friends', { token: authStore.token })
       _friends.value = friends
     } catch (err) {
-      _friendsError.value = mapAuthError(err)
+      _friendsError.value = mapAuthError(err, t)
       throw err
     } finally {
       _friendsLoading.value = false
@@ -46,10 +53,25 @@ export function useFriends() {
       const requests = await apiFetch('/api/friends/requests', { token: authStore.token })
       _requests.value = requests
     } catch (err) {
-      _requestsError.value = mapAuthError(err)
+      _requestsError.value = mapAuthError(err, t)
       throw err
     } finally {
       _requestsLoading.value = false
+    }
+  }
+
+  /** Loads pending friend requests sent by the signed-in user, awaiting a response. */
+  async function fetchSentRequests() {
+    _sentRequestsLoading.value = true
+    _sentRequestsError.value = null
+    try {
+      const sentRequests = await apiFetch('/api/friends/requests/sent', { token: authStore.token })
+      _sentRequests.value = sentRequests
+    } catch (err) {
+      _sentRequestsError.value = mapAuthError(err, t)
+      throw err
+    } finally {
+      _sentRequestsLoading.value = false
     }
   }
 
@@ -74,7 +96,7 @@ export function useFriends() {
         const results = await apiFetch(`/api/friends/search?q=${encodeURIComponent(q)}`, { token: authStore.token })
         if (seq === _searchSeq) _searchResults.value = results
       } catch (err) {
-        if (seq === _searchSeq) _searchError.value = mapAuthError(err)
+        if (seq === _searchSeq) _searchError.value = mapAuthError(err, t)
       } finally {
         if (seq === _searchSeq) _searchLoading.value = false
       }
@@ -136,11 +158,15 @@ export function useFriends() {
     requests: readonly(_requests),
     requestsLoading: readonly(_requestsLoading),
     requestsError: readonly(_requestsError),
+    sentRequests: readonly(_sentRequests),
+    sentRequestsLoading: readonly(_sentRequestsLoading),
+    sentRequestsError: readonly(_sentRequestsError),
     searchResults: readonly(_searchResults),
     searchLoading: readonly(_searchLoading),
     searchError: readonly(_searchError),
     fetchFriends,
     fetchRequests,
+    fetchSentRequests,
     searchUsers,
     clearSearch,
     sendRequest,

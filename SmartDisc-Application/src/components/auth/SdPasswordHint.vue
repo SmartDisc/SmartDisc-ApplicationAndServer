@@ -33,6 +33,11 @@ const rules = computed(() => passwordRules(props.value, t))
 
 <style scoped>
 .hint {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 10;
   background: var(--sd-glass-light-bg);
   border: 1px solid var(--sd-glass-light-border);
   -webkit-backdrop-filter: var(--sd-glass-blur-thin);

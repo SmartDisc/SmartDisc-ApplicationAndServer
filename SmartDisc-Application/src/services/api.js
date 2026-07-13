@@ -16,12 +16,16 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL
 const TIMEOUT_MS = 15000
 
 export class ApiError extends Error {
-  constructor(message, { status = null, fieldErrors = null, retryAfter = null } = {}) {
+  constructor(message, { status = null, fieldErrors = null, retryAfter = null, code = null } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.fieldErrors = fieldErrors
     this.retryAfter = retryAfter
+    // Stable machine-readable token (snake_case) a caller with a `t` function can
+    // localize. Comes from the backend's `code` field, or is set client-side for
+    // failures that never reach the server (config/timeout/network).
+    this.code = code
   }
 }
 
@@ -29,7 +33,7 @@ export async function apiFetch(path, { method = 'GET', body, token, signal } = {
   if (!BASE_URL) {
     throw new ApiError(
       'API base URL is not configured. Set VITE_API_BASE_URL at build time.',
-      { status: null },
+      { status: null, code: 'config_missing' },
     )
   }
 
@@ -53,9 +57,9 @@ export async function apiFetch(path, { method = 'GET', body, token, signal } = {
     })
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new ApiError('The request timed out. Please try again.', { status: null })
+      throw new ApiError('The request timed out. Please try again.', { status: null, code: 'timeout' })
     }
-    throw new ApiError('Could not reach the server. Check your connection and try again.', { status: null })
+    throw new ApiError('Could not reach the server. Check your connection and try again.', { status: null, code: 'network_error' })
   } finally {
     clearTimeout(timeoutId)
     if (signal) signal.removeEventListener('abort', onExternalAbort)
@@ -78,6 +82,7 @@ export async function apiFetch(path, { method = 'GET', body, token, signal } = {
       status: response.status,
       fieldErrors: data?.errors ?? null,
       retryAfter: retryAfterHeader ? Number(retryAfterHeader) : null,
+      code: data?.code ?? null,
     })
   }
 

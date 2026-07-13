@@ -41,11 +41,11 @@ class UserController extends AbstractController
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_string($data['email'] ?? null) || !is_string($data['password'] ?? null) || !is_string($data['name'] ?? null)) {
-            return $this->json(['error' => 'email, password and name are required strings.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'email, password and name are required strings.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         $registration = new RegistrationRequest();
@@ -60,11 +60,11 @@ class UserController extends AbstractController
                 $errors[$violation->getPropertyPath()] = $violation->getMessage();
             }
 
-            return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => $errors, 'code' => 'validation_failed'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if (null !== $userRepository->findOneBy(['email' => $registration->email])) {
-            return $this->json(['errors' => ['email' => 'An account with this email already exists.']], Response::HTTP_CONFLICT);
+            return $this->json(['errors' => ['email' => 'An account with this email already exists.'], 'code' => 'email_already_exists'], Response::HTTP_CONFLICT);
         }
 
         $user = new User();
@@ -79,7 +79,7 @@ class UserController extends AbstractController
         } catch (UniqueConstraintViolationException) {
             // Two concurrent signups raced past the findOneBy check above; the DB's unique
             // constraint is the actual source of truth for email uniqueness.
-            return $this->json(['errors' => ['email' => 'An account with this email already exists.']], Response::HTTP_CONFLICT);
+            return $this->json(['errors' => ['email' => 'An account with this email already exists.'], 'code' => 'email_already_exists'], Response::HTTP_CONFLICT);
         }
 
         return $this->json(['token' => $jwtManager->create($user)], Response::HTTP_CREATED);
@@ -114,15 +114,15 @@ class UserController extends AbstractController
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_string($data['currentPassword'] ?? null) || !is_string($data['newPassword'] ?? null)) {
-            return $this->json(['error' => 'currentPassword and newPassword are required strings.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'currentPassword and newPassword are required strings.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!$passwordHasher->isPasswordValid($user, $data['currentPassword'])) {
-            return $this->json(['errors' => ['currentPassword' => 'Current password is incorrect.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['currentPassword' => 'Current password is incorrect.'], 'code' => 'current_password_incorrect'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $changeRequest = new ChangePasswordRequest();
@@ -135,11 +135,11 @@ class UserController extends AbstractController
                 $errors[$violation->getPropertyPath()] = $violation->getMessage();
             }
 
-            return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => $errors, 'code' => 'validation_failed'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if ($passwordHasher->isPasswordValid($user, $changeRequest->newPassword)) {
-            return $this->json(['errors' => ['newPassword' => 'New password must be different from the current password.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['newPassword' => 'New password must be different from the current password.'], 'code' => 'new_password_must_differ'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $user->setPassword($passwordHasher->hashPassword($user, $changeRequest->newPassword));
@@ -158,15 +158,15 @@ class UserController extends AbstractController
         try {
             $data = $request->toArray();
         } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!is_string($data['currentPassword'] ?? null)) {
-            return $this->json(['error' => 'currentPassword is required.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'currentPassword is required.', 'code' => 'missing_required_fields'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!$passwordHasher->isPasswordValid($user, $data['currentPassword'])) {
-            return $this->json(['errors' => ['currentPassword' => 'Current password is incorrect.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['currentPassword' => 'Current password is incorrect.'], 'code' => 'current_password_incorrect'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $entityManager->remove($user);

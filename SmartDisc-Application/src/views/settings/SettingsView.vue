@@ -36,9 +36,23 @@ const {
 } = usePreferences()
 const {t} = useI18n()
 
+// ── Sign out sheet ─────────────────────────────────────────────────────────
+const signOutSheet = ref(false)
+const signOutLoading = ref(false)
+
+function openSignOutSheet() {
+  signOutSheet.value = true
+}
+
 async function handleSignOut() {
-  await signOut()
-  router.push('/welcome')
+  if (signOutLoading.value) return
+  signOutLoading.value = true
+  try {
+    await signOut()
+    router.push('/welcome')
+  } finally {
+    signOutLoading.value = false
+  }
 }
 
 // ── Change password sheet ─────────────────────────────────────────────────
@@ -48,6 +62,7 @@ const newPw = ref('')
 const confirmPw = ref('')
 const pwLoading = ref(false)
 const pwError = ref('')
+const pwSuccess = ref(false)
 
 const pwSaveDisabled = computed(() =>
     !currentPw.value ||
@@ -60,6 +75,7 @@ function openPasswordSheet() {
   newPw.value = ''
   confirmPw.value = ''
   pwError.value = ''
+  pwSuccess.value = false
   passwordSheet.value = true
 }
 
@@ -73,9 +89,13 @@ async function handlePasswordChange() {
   pwError.value = ''
   try {
     await changePassword(currentPw.value, newPw.value)
-    passwordSheet.value = false
+    pwSuccess.value = true
+    setTimeout(() => {
+      passwordSheet.value = false
+      pwSuccess.value = false
+    }, 1200)
   } catch (err) {
-    pwError.value = mapAuthError(err)
+    pwError.value = mapAuthError(err, t)
   } finally {
     pwLoading.value = false
   }
@@ -86,10 +106,12 @@ const deleteSheet = ref(false)
 const deletePw = ref('')
 const deleteLoading = ref(false)
 const deleteError = ref('')
+const deleteSuccess = ref(false)
 
 function openDeleteSheet() {
   deletePw.value = ''
   deleteError.value = ''
+  deleteSuccess.value = false
   deleteSheet.value = true
 }
 
@@ -99,10 +121,12 @@ async function handleDeleteAccount() {
   deleteError.value = ''
   try {
     await deleteAccount(deletePw.value)
-    deleteSheet.value = false
-    router.push('/welcome')
+    deleteSuccess.value = true
+    setTimeout(() => {
+      router.push('/welcome')
+    }, 900)
   } catch (err) {
-    deleteError.value = mapAuthError(err)
+    deleteError.value = mapAuthError(err, t)
   } finally {
     deleteLoading.value = false
   }
@@ -209,12 +233,10 @@ function openWebsite() {
         <SdSectionLabel>{{ t('settings.page.helpSupport') }}</SdSectionLabel>
         <SdCard class="support-card" :padding="18">
           <div class="support-header">
-            <div class="list-icon list-icon--gold">
-              <LifeBuoy :size="18" :stroke-width="1.75"/>
-            </div>
+            
             <div>
               <div class="support-title">{{ t('settings.helpSupport.liveSupport') }}</div>
-              <div class="support-meta">{{ t('settings.helpSupport.liveSupportMeta') }}</div>
+
             </div>
           </div>
           <SdBtn variant="primary" size="md" block @click="openWebsite">
@@ -263,7 +285,7 @@ function openWebsite() {
           </template>
           {{ t('settings.accountSecurity.changePassword') }}
         </SdBtn>
-        <SdBtn variant="ghost" size="md" block class="danger-btn" @click="handleSignOut">
+        <SdBtn variant="ghost" size="md" block class="danger-btn" @click="openSignOutSheet">
           <template #icon-left>
             <LogOut :size="16"/>
           </template>
@@ -315,9 +337,10 @@ function openWebsite() {
             :maxlength="128"
             :error="confirmPw && newPw !== confirmPw ? t('settings.accountSecurity.passwordsNoMatch') : ''"
         />
+        <p v-if="pwSuccess" class="pw-success">{{ t('settings.accountSecurity.passwordUpdated') }}</p>
         <p v-if="pwError" class="pw-error">{{ pwError }}</p>
         <div class="pw-actions">
-          <SdBtn variant="ghost" size="md" style="flex:1;" @click="passwordSheet = false">{{
+          <SdBtn variant="ghost" size="md" style="flex:1;" :disabled="pwSuccess" @click="passwordSheet = false">{{
               t('common.cancel')
             }}
           </SdBtn>
@@ -325,7 +348,7 @@ function openWebsite() {
               variant="primary"
               size="md"
               style="flex:1;"
-              :disabled="pwSaveDisabled || pwLoading"
+              :disabled="pwSaveDisabled || pwLoading || pwSuccess"
               @click="handlePasswordChange"
           >
             {{ pwLoading ? t('settings.accountSecurity.saving') : t('settings.accountSecurity.updatePassword') }}
@@ -366,6 +389,35 @@ function openWebsite() {
               @click="handleDeleteAccount"
           >
             {{ deleteLoading ? t('settings.accountSecurity.deleting') : t('settings.accountSecurity.deleteAccount') }}
+          </SdBtn>
+        </div>
+      </div>
+    </SdBottomSheet>
+
+    <!-- Sign out sheet -->
+    <SdBottomSheet v-model="signOutSheet" :title="t('settings.accountSecurity.signOutSheetTitle')">
+      <div class="pw-stack">
+        <div class="pw-header">
+          <div class="pw-header__icon pw-header__icon--danger">
+            <LogOut :size="18" :stroke-width="1.75"/>
+          </div>
+          <div>
+            <p class="pw-header__eyebrow pw-header__eyebrow--danger">
+              {{ t('settings.accountSecurity.signOutEyebrow') }}</p>
+            <p class="pw-header__sub">{{ t('settings.accountSecurity.signOutBody') }}</p>
+          </div>
+        </div>
+        <div class="pw-actions">
+          <SdBtn variant="ghost" size="md" style="flex:1;" @click="signOutSheet = false">{{ t('common.cancel') }}</SdBtn>
+          <SdBtn
+              variant="primary"
+              size="md"
+              style="flex:1;"
+              class="danger-confirm-btn"
+              :disabled="signOutLoading"
+              @click="handleSignOut"
+          >
+            {{ signOutLoading ? t('settings.accountSecurity.signingOut') : t('settings.accountSecurity.signOutConfirm') }}
           </SdBtn>
         </div>
       </div>

@@ -36,7 +36,7 @@ class DiscInvitationController extends AbstractController
         $invitation = $discInvitationRepository->find($id);
 
         if (!$this->isPendingInvitationFor($invitation, $user)) {
-            return $this->json(['error' => 'Invitation not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Invitation not found.', 'code' => 'invitation_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $disc = $invitation->getDisc();
@@ -71,7 +71,7 @@ class DiscInvitationController extends AbstractController
         $invitation = $discInvitationRepository->find($id);
 
         if (!$this->isPendingInvitationFor($invitation, $user)) {
-            return $this->json(['error' => 'Invitation not found.'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Invitation not found.', 'code' => 'invitation_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         $invitation->setStatus('declined');
