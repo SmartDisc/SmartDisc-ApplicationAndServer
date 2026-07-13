@@ -1,10 +1,9 @@
 <script setup>
 import {ref, computed} from 'vue'
-import {useRouter} from 'vue-router'
 import {
   KeyRound, ChevronRight, AlertTriangle, LogOut,
   Ruler, Gauge, Languages,
-  LifeBuoy, MessageCircle, FileText, Lock, Info, ExternalLink,
+  MessageCircle, FileText, Lock, Info, ExternalLink,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SdAppBar from '@/components/ui/SdAppBar.vue'
@@ -16,121 +15,27 @@ import {
   SdCard,
   SdPageHeader,
   SdBtn,
-  SdField,
-  SdBottomSheet,
   SdOptionSheet
 } from '@/components/ui'
-import SdPasswordHint from '@/components/auth/SdPasswordHint.vue'
+import ChangePasswordSheet from '@/components/settings/ChangePasswordSheet.vue'
+import DeleteAccountSheet from '@/components/settings/DeleteAccountSheet.vue'
+import SignOutSheet from '@/components/settings/SignOutSheet.vue'
 import {useAuth} from '@/composables/useAuth'
 import {usePreferences} from '@/composables/usePreferences'
-import {mapAuthError} from '@/stores/auth'
-import {sanitizePassword} from '@/utils/sanitize'
-import {password as validatePassword} from '@/utils/validate'
 import {useI18n} from '@/i18n'
 
-const router = useRouter()
-const {user, signOut, changePassword, deleteAccount} = useAuth()
+const {user} = useAuth()
 const {
   language, distanceUnit, speedUnit,
   saveLanguage, saveDistanceUnit, saveSpeedUnit,
 } = usePreferences()
 const {t} = useI18n()
 
-// ── Sign out sheet ─────────────────────────────────────────────────────────
-const signOutSheet = ref(false)
-const signOutLoading = ref(false)
-
-function openSignOutSheet() {
-  signOutSheet.value = true
-}
-
-async function handleSignOut() {
-  if (signOutLoading.value) return
-  signOutLoading.value = true
-  try {
-    await signOut()
-    router.push('/welcome')
-  } finally {
-    signOutLoading.value = false
-  }
-}
-
-// ── Change password sheet ─────────────────────────────────────────────────
+// Account-action confirmation sheets. Each sheet is a self-contained child that
+// owns its own form/loading/error state; the parent only tracks open/closed.
 const passwordSheet = ref(false)
-const currentPw = ref('')
-const newPw = ref('')
-const confirmPw = ref('')
-const pwLoading = ref(false)
-const pwError = ref('')
-const pwSuccess = ref(false)
-
-const pwSaveDisabled = computed(() =>
-    !currentPw.value ||
-    !!validatePassword(newPw.value) ||
-    newPw.value !== confirmPw.value
-)
-
-function openPasswordSheet() {
-  currentPw.value = ''
-  newPw.value = ''
-  confirmPw.value = ''
-  pwError.value = ''
-  pwSuccess.value = false
-  passwordSheet.value = true
-}
-
-async function handlePasswordChange() {
-  if (pwSaveDisabled.value) return
-  if (newPw.value !== confirmPw.value) {
-    pwError.value = t('settings.accountSecurity.passwordsNoMatch')
-    return
-  }
-  pwLoading.value = true
-  pwError.value = ''
-  try {
-    await changePassword(currentPw.value, newPw.value)
-    pwSuccess.value = true
-    setTimeout(() => {
-      passwordSheet.value = false
-      pwSuccess.value = false
-    }, 1200)
-  } catch (err) {
-    pwError.value = mapAuthError(err, t)
-  } finally {
-    pwLoading.value = false
-  }
-}
-
-// ── Delete account sheet ──────────────────────────────────────────────────
 const deleteSheet = ref(false)
-const deletePw = ref('')
-const deleteLoading = ref(false)
-const deleteError = ref('')
-const deleteSuccess = ref(false)
-
-function openDeleteSheet() {
-  deletePw.value = ''
-  deleteError.value = ''
-  deleteSuccess.value = false
-  deleteSheet.value = true
-}
-
-async function handleDeleteAccount() {
-  if (!deletePw.value || deleteLoading.value) return
-  deleteLoading.value = true
-  deleteError.value = ''
-  try {
-    await deleteAccount(deletePw.value)
-    deleteSuccess.value = true
-    setTimeout(() => {
-      router.push('/welcome')
-    }, 900)
-  } catch (err) {
-    deleteError.value = mapAuthError(err, t)
-  } finally {
-    deleteLoading.value = false
-  }
-}
+const signOutSheet = ref(false)
 
 // ── Appearance: unit + language sheets ─────────────────────────────────────
 const distanceSheet = ref(false)
@@ -233,7 +138,7 @@ function openWebsite() {
         <SdSectionLabel>{{ t('settings.page.helpSupport') }}</SdSectionLabel>
         <SdCard class="support-card" :padding="18">
           <div class="support-header">
-            
+
             <div>
               <div class="support-title">{{ t('settings.helpSupport.liveSupport') }}</div>
 
@@ -279,19 +184,19 @@ function openWebsite() {
       <!-- Account -->
       <div>
         <SdSectionLabel>{{ t('settings.page.account') }}</SdSectionLabel>
-        <SdBtn variant="ghost" size="md" block class="change-password-btn" @click="openPasswordSheet">
+        <SdBtn variant="ghost" size="md" block class="change-password-btn" @click="passwordSheet = true">
           <template #icon-left>
             <KeyRound :size="16"/>
           </template>
           {{ t('settings.accountSecurity.changePassword') }}
         </SdBtn>
-        <SdBtn variant="ghost" size="md" block class="danger-btn" @click="openSignOutSheet">
+        <SdBtn variant="ghost" size="md" block class="danger-btn" @click="signOutSheet = true">
           <template #icon-left>
             <LogOut :size="16"/>
           </template>
           {{ t('settings.page.signOut') }}
         </SdBtn>
-        <SdBtn variant="ghost" size="md" block class="danger-btn" @click="openDeleteSheet">
+        <SdBtn variant="ghost" size="md" block class="danger-btn" @click="deleteSheet = true">
           <template #icon-left>
             <AlertTriangle :size="16"/>
           </template>
@@ -302,126 +207,9 @@ function openWebsite() {
 
     <div style="height: 100px;"/>
 
-    <!-- Change Password sheet -->
-    <SdBottomSheet v-model="passwordSheet" :title="t('settings.accountSecurity.passwordSheetTitle')">
-      <div class="pw-stack">
-        <div class="pw-header">
-          <div class="pw-header__icon">
-            <KeyRound :size="18" :stroke-width="1.75"/>
-          </div>
-          <div>
-            <p class="pw-header__eyebrow">{{ t('settings.accountSecurity.passwordSheetEyebrow') }}</p>
-            <p class="pw-header__sub">{{ t('settings.accountSecurity.passwordSheetSubtitle') }}</p>
-          </div>
-        </div>
-        <SdField
-            v-model="currentPw"
-            :label="t('settings.accountSecurity.currentPassword')"
-            type="password"
-            :sanitize="sanitizePassword"
-            :maxlength="128"
-        />
-        <SdField
-            v-model="newPw"
-            :label="t('settings.accountSecurity.newPassword')"
-            type="password"
-            :sanitize="sanitizePassword"
-            :maxlength="128"
-        />
-        <SdPasswordHint :value="newPw"/>
-        <SdField
-            v-model="confirmPw"
-            :label="t('settings.accountSecurity.repeatNewPassword')"
-            type="password"
-            :sanitize="sanitizePassword"
-            :maxlength="128"
-            :error="confirmPw && newPw !== confirmPw ? t('settings.accountSecurity.passwordsNoMatch') : ''"
-        />
-        <p v-if="pwSuccess" class="pw-success">{{ t('settings.accountSecurity.passwordUpdated') }}</p>
-        <p v-if="pwError" class="pw-error">{{ pwError }}</p>
-        <div class="pw-actions">
-          <SdBtn variant="ghost" size="md" style="flex:1;" :disabled="pwSuccess" @click="passwordSheet = false">{{
-              t('common.cancel')
-            }}
-          </SdBtn>
-          <SdBtn
-              variant="primary"
-              size="md"
-              style="flex:1;"
-              :disabled="pwSaveDisabled || pwLoading || pwSuccess"
-              @click="handlePasswordChange"
-          >
-            {{ pwLoading ? t('settings.accountSecurity.saving') : t('settings.accountSecurity.updatePassword') }}
-          </SdBtn>
-        </div>
-      </div>
-    </SdBottomSheet>
-
-    <!-- Delete account sheet -->
-    <SdBottomSheet v-model="deleteSheet" :title="t('settings.accountSecurity.deleteSheetTitle')">
-      <div class="pw-stack">
-        <div class="pw-header">
-          <div class="pw-header__icon pw-header__icon--danger">
-            <AlertTriangle :size="18" :stroke-width="1.75"/>
-          </div>
-          <div>
-            <p class="pw-header__eyebrow pw-header__eyebrow--danger">
-              {{ t('settings.accountSecurity.deleteWarningEyebrow') }}</p>
-            <p class="pw-header__sub">{{ t('settings.accountSecurity.deleteWarningBody') }}</p>
-          </div>
-        </div>
-        <SdField
-            v-model="deletePw"
-            :label="t('settings.accountSecurity.currentPassword')"
-            type="password"
-            :sanitize="sanitizePassword"
-            :maxlength="128"
-        />
-        <p v-if="deleteError" class="pw-error">{{ deleteError }}</p>
-        <div class="pw-actions">
-          <SdBtn variant="ghost" size="md" style="flex:1;" @click="deleteSheet = false">{{ t('common.cancel') }}</SdBtn>
-          <SdBtn
-              variant="primary"
-              size="md"
-              style="flex:1;"
-              class="danger-confirm-btn"
-              :disabled="!deletePw || deleteLoading"
-              @click="handleDeleteAccount"
-          >
-            {{ deleteLoading ? t('settings.accountSecurity.deleting') : t('settings.accountSecurity.deleteAccount') }}
-          </SdBtn>
-        </div>
-      </div>
-    </SdBottomSheet>
-
-    <!-- Sign out sheet -->
-    <SdBottomSheet v-model="signOutSheet" :title="t('settings.accountSecurity.signOutSheetTitle')">
-      <div class="pw-stack">
-        <div class="pw-header">
-          <div class="pw-header__icon pw-header__icon--danger">
-            <LogOut :size="18" :stroke-width="1.75"/>
-          </div>
-          <div>
-            <p class="pw-header__eyebrow pw-header__eyebrow--danger">
-              {{ t('settings.accountSecurity.signOutEyebrow') }}</p>
-            <p class="pw-header__sub">{{ t('settings.accountSecurity.signOutBody') }}</p>
-          </div>
-        </div>
-        <div class="pw-actions">
-          <SdBtn variant="ghost" size="md" style="flex:1;" @click="signOutSheet = false">{{ t('common.cancel') }}</SdBtn>
-          <SdBtn
-              variant="primary"
-              size="md"
-              style="flex:1;"
-              class="danger-confirm-btn"
-              :disabled="signOutLoading"
-              @click="handleSignOut"
-          >
-            {{ signOutLoading ? t('settings.accountSecurity.signingOut') : t('settings.accountSecurity.signOutConfirm') }}
-          </SdBtn>
-        </div>
-      </div>
-    </SdBottomSheet>
+    <ChangePasswordSheet v-model="passwordSheet"/>
+    <DeleteAccountSheet v-model="deleteSheet"/>
+    <SignOutSheet v-model="signOutSheet"/>
 
     <SdOptionSheet
         v-model="distanceSheet"
@@ -557,83 +345,5 @@ function openWebsite() {
 
 .danger-btn:hover {
   background: rgba(192, 88, 78, .04) !important;
-}
-
-/* Password / delete sheets */
-.pw-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 4px;
-}
-
-.pw-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 2px;
-}
-
-.pw-header__icon {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--sd-gold-grad);
-  color: #5a4416;
-  box-shadow: var(--sd-shadow-sm);
-}
-
-.pw-header__eyebrow {
-  font-family: var(--sd-font-display);
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--sd-azure);
-  margin: 0 0 2px;
-}
-
-.pw-header__sub {
-  font-family: var(--sd-font-body);
-  font-size: 13px;
-  color: var(--sd-fg2);
-  margin: 0;
-  line-height: 1.4;
-}
-
-.pw-error {
-  font-family: var(--sd-font-body);
-  font-size: 13px;
-  color: var(--sd-danger);
-  margin: 0;
-}
-
-.pw-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.pw-header__icon--danger {
-  background: rgba(192, 88, 78, .12);
-  color: var(--sd-danger);
-  box-shadow: none;
-}
-
-.pw-header__eyebrow--danger {
-  color: var(--sd-danger);
-}
-
-.danger-confirm-btn {
-  background: var(--sd-danger) !important;
-  color: #fff !important;
-}
-
-.danger-confirm-btn:not(:disabled):hover {
-  opacity: 0.9;
 }
 </style>

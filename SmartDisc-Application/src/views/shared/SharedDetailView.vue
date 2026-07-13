@@ -24,20 +24,15 @@ const longestUnit = computed(() => distanceUnitLabel(distanceUnit.value))
 
 <template>
   <AppLayout>
-    <SdAppBar back :title="disc?.name ?? ''" >
-      <template #action>
-        <SdIconBtn variant="glass">
-          <MoreHorizontal :size="18" :stroke-width="1.75" />
-        </SdIconBtn>
-      </template>
-    </SdAppBar>
+    <SdAppBar back :title="disc?.name ?? ''" ></SdAppBar>
 
     <!-- Hero card -->
     <SdCard v-if="disc" class="hero-card" :padding="18">
       <div class="hero-top">
         <div class="hero-info">
           <div class="hero-name">{{ disc.name }}</div>
-          <div class="hero-uuid">{{ disc.uuid }} · {{ t('shared.detail.ownedBy', { owner: disc.owner }) }}</div>
+          <div class="hero-uuid">{{ disc.uuid }}</div>
+          <div class="hero-uuid">{{ t('shared.detail.ownedBy', { owner: disc.owner }) }}</div>
         </div>
         <SdChip tone="read">
           <template #icon><Eye :size="12" /></template>
