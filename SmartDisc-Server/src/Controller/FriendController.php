@@ -7,10 +7,10 @@ use App\Entity\User;
 use App\Repository\FriendshipRepository;
 use App\Repository\NotificationRepository;
 use App\Repository\UserRepository;
+use App\Serializer\FriendSerializer;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Exception\JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,31 +21,33 @@ use function is_string;
 #[Route('/api/friends')]
 class FriendController extends AbstractController
 {
+    use JsonBodyTrait;
+
     #[Route(name: 'app_friends_list', methods: ['GET'])]
-    public function list(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository): JsonResponse
+    public function list(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository, FriendSerializer $friendSerializer): JsonResponse
     {
         $friendships = $friendshipRepository->findAcceptedFor($user);
 
         return $this->json(array_map(
-            fn (Friendship $friendship) => $this->serializeFriend($friendship, $user),
+            fn (Friendship $friendship) => $friendSerializer->friend($friendship, $user),
             $friendships,
         ));
     }
 
     #[Route('/requests', name: 'app_friends_requests_list', methods: ['GET'])]
-    public function requestsList(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository): JsonResponse
+    public function requestsList(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository, FriendSerializer $friendSerializer): JsonResponse
     {
         $friendships = $friendshipRepository->findPendingFor($user);
 
-        return $this->json(array_map($this->serializeRequest(...), $friendships));
+        return $this->json(array_map($friendSerializer->request(...), $friendships));
     }
 
     #[Route('/requests/sent', name: 'app_friends_requests_sent_list', methods: ['GET'])]
-    public function requestsSentList(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository): JsonResponse
+    public function requestsSentList(#[CurrentUser] User $user, FriendshipRepository $friendshipRepository, FriendSerializer $friendSerializer): JsonResponse
     {
         $friendships = $friendshipRepository->findSentPendingFor($user);
 
-        return $this->json(array_map($this->serializeSentRequest(...), $friendships));
+        return $this->json(array_map($friendSerializer->sentRequest(...), $friendships));
     }
 
     #[Route('/requests', name: 'app_friends_requests_create', methods: ['POST'])]
@@ -57,10 +59,9 @@ class FriendController extends AbstractController
         NotificationRepository $notificationRepository,
         EntityManagerInterface $entityManager,
     ): JsonResponse {
-        try {
-            $data = $request->toArray();
-        } catch (JsonException) {
-            return $this->json(['error' => 'Request body must be valid JSON.', 'code' => 'invalid_json_body'], Response::HTTP_BAD_REQUEST);
+        $data = $this->decodeJsonBody($request);
+        if ($data instanceof JsonResponse) {
+            return $data;
         }
 
         if (!is_string($data['email'] ?? null)) {
@@ -205,45 +206,5 @@ class FriendController extends AbstractController
         return $friendship instanceof Friendship
             && $friendship->getAddressee()?->getId() === $user->getId()
             && 'pending' === $friendship->getStatus();
-    }
-
-    private function serializeFriend(Friendship $friendship, User $user): array
-    {
-        $other = $friendship->getRequester()?->getId() === $user->getId()
-            ? $friendship->getAddressee()
-            : $friendship->getRequester();
-
-        return [
-            'friendshipId' => $friendship->getId(),
-            'id' => $other?->getId(),
-            'name' => $other?->getName(),
-            'email' => $other?->getEmail(),
-        ];
-    }
-
-    private function serializeRequest(Friendship $friendship): array
-    {
-        $from = $friendship->getRequester();
-
-        return [
-            'id' => $friendship->getId(),
-            'fromUserId' => $from?->getId(),
-            'fromName' => $from?->getName(),
-            'fromEmail' => $from?->getEmail(),
-            'createdAt' => $friendship->getCreatedAt()->format(DATE_ATOM),
-        ];
-    }
-
-    private function serializeSentRequest(Friendship $friendship): array
-    {
-        $to = $friendship->getAddressee();
-
-        return [
-            'id' => $friendship->getId(),
-            'toUserId' => $to?->getId(),
-            'toName' => $to?->getName(),
-            'toEmail' => $to?->getEmail(),
-            'createdAt' => $friendship->getCreatedAt()->format(DATE_ATOM),
-        ];
     }
 }

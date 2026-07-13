@@ -66,14 +66,20 @@ function respondKey(n) {
   return `${n.type}:${n.data.friendshipId ?? n.data.invitationId}`
 }
 
-async function handleAcceptRequest(n) {
-  const id = n.data.friendshipId
+// The accept/decline flow is identical for every actionable notification —
+// only the id field it reads and the API call it makes differ. `idField` picks
+// the raw numeric id out of the payload (friendshipId vs invitationId — see the
+// respondKey note above on why they can't share a composite key), and `action`
+// is the composable call to run. All the guarding/bookkeeping/mark-read logic
+// (which drives the cross-view pending-state sync) lives here, once.
+async function respondToNotification(n, {idField, action}) {
+  const id = n.data[idField]
   const key = respondKey(n)
   if (!id || respondingId.value === key) return
   respondingId.value = key
   delete respondErrors.value[key]
   try {
-    await acceptRequest(id)
+    await action(id)
     resolvedRequests.value.add(key)
     if (!n.read) markRead(n.id).catch(() => {
     })
@@ -84,58 +90,16 @@ async function handleAcceptRequest(n) {
   }
 }
 
-async function handleDeclineRequest(n) {
-  const id = n.data.friendshipId
-  const key = respondKey(n)
-  if (!id || respondingId.value === key) return
-  respondingId.value = key
-  delete respondErrors.value[key]
-  try {
-    await declineRequest(id)
-    resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {
-    })
-  } catch (err) {
-    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
-  } finally {
-    respondingId.value = null
-  }
+function onAccept(n) {
+  return n.type === 'friend_request'
+      ? respondToNotification(n, {idField: 'friendshipId', action: acceptRequest})
+      : respondToNotification(n, {idField: 'invitationId', action: acceptInvitation})
 }
 
-async function handleAcceptInvitation(n) {
-  const id = n.data.invitationId
-  const key = respondKey(n)
-  if (!id || respondingId.value === key) return
-  respondingId.value = key
-  delete respondErrors.value[key]
-  try {
-    await acceptInvitation(id)
-    resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {
-    })
-  } catch (err) {
-    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
-  } finally {
-    respondingId.value = null
-  }
-}
-
-async function handleDeclineInvitation(n) {
-  const id = n.data.invitationId
-  const key = respondKey(n)
-  if (!id || respondingId.value === key) return
-  respondingId.value = key
-  delete respondErrors.value[key]
-  try {
-    await declineInvitation(id)
-    resolvedRequests.value.add(key)
-    if (!n.read) markRead(n.id).catch(() => {
-    })
-  } catch (err) {
-    respondErrors.value = {...respondErrors.value, [key]: mapAuthError(err, t)}
-  } finally {
-    respondingId.value = null
-  }
+function onDecline(n) {
+  return n.type === 'friend_request'
+      ? respondToNotification(n, {idField: 'friendshipId', action: declineRequest})
+      : respondToNotification(n, {idField: 'invitationId', action: declineInvitation})
 }
 
 // Maps each backend notification `type` to an icon, a visual tone (reusing
@@ -276,7 +240,7 @@ function onMarkAllRead() {
               <button
                   class="notif-action notif-action--decline"
                   :disabled="respondingId === respondKey(n)"
-                  @click="n.type === 'friend_request' ? handleDeclineRequest(n) : handleDeclineInvitation(n)"
+                  @click="onDecline(n)"
               >
                 <Loader2
                     v-if="respondingId === respondKey(n)"
@@ -288,7 +252,7 @@ function onMarkAllRead() {
               <button
                   class="notif-action notif-action--accept"
                   :disabled="respondingId === respondKey(n)"
-                  @click="n.type === 'friend_request' ? handleAcceptRequest(n) : handleAcceptInvitation(n)"
+                  @click="onAccept(n)"
               >
                 <Loader2
                     v-if="respondingId === respondKey(n)"

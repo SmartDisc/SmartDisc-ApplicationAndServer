@@ -46,7 +46,7 @@
   --sd-glass-blur-strong: saturate(200%) blur(34px);
   --sd-glass-blur-thin:   saturate(160%) blur(10px);
 
-  --sd-glass-light-bg:     rgba(255, 255, 255, 0.55);
+  --sd-glass-light-bg:     rgba(255, 255, 255, 0.70);
   --sd-glass-light-border: rgba(255, 255, 255, 0.70);
   --sd-glass-light-hi:     rgba(255, 255, 255, 0.90);
 
