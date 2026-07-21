@@ -21,8 +21,11 @@ services:
         JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set JWT_PASSPHRASE}
     restart: unless-stopped
     environment:
-      SERVER_NAME: ${SERVER_NAME:?set SERVER_NAME, e.g. your-domain.example.com}
-      DEFAULT_URI: "https://${SERVER_NAME:?set SERVER_NAME}"
+      # Caddy itself must NOT try to obtain its own TLS certificate: Dokploy's
+      # Traefik already terminates HTTPS for ${SERVER_NAME} and forwards
+      # plain HTTP here. ":80" tells Caddy to just serve HTTP, no ACME.
+      SERVER_NAME: ":80"
+      DEFAULT_URI: "https://${SERVER_NAME:?set SERVER_NAME, e.g. your-domain.example.com}"
       APP_SECRET: ${APP_SECRET:?set APP_SECRET}
       DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8"
       JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
