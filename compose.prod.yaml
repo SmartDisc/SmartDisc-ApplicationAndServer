@@ -28,7 +28,7 @@ services:
       JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
       JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set JWT_PASSPHRASE}
-      CORS_ALLOW_ORIGIN: '^(capacitor|ionic)://localhost$|^https?://localhost(:[0-9]+)?$|^https?://127\.0\.0\.1(:[0-9]+)?$'
+      CORS_ALLOW_ORIGIN: '*'
       MERCURE_URL: "http://php/.well-known/mercure"
       MERCURE_PUBLIC_URL: "https://${SERVER_NAME:?set SERVER_NAME}/.well-known/mercure"
       MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:?set CADDY_MERCURE_JWT_SECRET}
