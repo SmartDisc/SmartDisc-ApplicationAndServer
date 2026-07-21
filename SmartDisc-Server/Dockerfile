@@ -88,6 +88,13 @@ COPY --link --exclude=frankenphp/ . ./
 
 RUN <<-EOF
 	mkdir -p var/cache var/log var/share
+	# .env is excluded via .dockerignore (never bake host/dev secrets into the
+	# image); dump-env and the cache:clear below still need every %env(...)%
+	# referenced in config/packages/ to resolve to *something* to compile the
+	# container, so seed a throwaway copy of the non-secret example values.
+	# Real config reaches the app via runtime environment variables, which
+	# always override whatever ends up baked in here.
+	cp .env.example .env
 	composer dump-autoload --classmap-authoritative --no-dev
 	composer dump-env prod
 	composer run-script --no-dev post-install-cmd
