@@ -1,16 +1,58 @@
 ---
-# Production stack: only the Symfony API + database.
-# SmartDisc-Application is a native Capacitor app (iOS/Android); it is not
-# served from this stack in production.
+# Production stack: Symfony API + PostgreSQL. Self-contained — no included
+# files, no wrapper script. Works with a plain `docker compose -f
+# compose.prod.yaml up -d --build` as long as the required environment
+# variables below are set (Docker Compose refuses to start otherwise, with a
+# clear error naming the missing variable).
 #
-# Usage (from this directory):
-#   docker compose -f compose.prod.yaml build --pull --no-cache
-#   SERVER_NAME=your-domain.example.com \
-#   APP_SECRET=ChangeMe \
-#   CADDY_MERCURE_JWT_SECRET=ChangeThisMercureHubJWTSecretKey \
-#   docker compose -f compose.prod.yaml up --wait
-include:
-  - path: ./SmartDisc-Server/compose.yaml
-    env_file: ./SmartDisc-Server/.env
-  - path: ./SmartDisc-Server/compose.prod.yaml
-    env_file: ./SmartDisc-Server/.env
+# Required: SERVER_NAME, APP_SECRET, POSTGRES_PASSWORD, CADDY_MERCURE_JWT_SECRET, JWT_PASSPHRASE
+# Optional (defaults shown): POSTGRES_DB=app, POSTGRES_USER=app, HTTP_PORT=8083
+#
+# SmartDisc-Application is not served by this stack — it ships as a native
+# Capacitor app.
+services:
+  php:
+    build:
+      context: ./SmartDisc-Server
+      target: frankenphp_prod
+      args:
+        # Bakes the JWT keypair at build time with this passphrase (see
+        # SmartDisc-Server/Dockerfile) — must match the runtime value below.
+        JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set JWT_PASSPHRASE}
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ${SERVER_NAME:?set SERVER_NAME, e.g. your-domain.example.com}
+      DEFAULT_URI: "https://${SERVER_NAME:?set SERVER_NAME}"
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET}
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8"
+      JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
+      JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set JWT_PASSPHRASE}
+      CORS_ALLOW_ORIGIN: '^(capacitor|ionic)://localhost$|^https?://localhost(:[0-9]+)?$|^https?://127\.0\.0\.1(:[0-9]+)?$'
+      MERCURE_URL: "http://php/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "https://${SERVER_NAME:?set SERVER_NAME}/.well-known/mercure"
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:?set CADDY_MERCURE_JWT_SECRET}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?set CADDY_MERCURE_JWT_SECRET}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?set CADDY_MERCURE_JWT_SECRET}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "${HTTP_PORT:-8083}:80"
+    depends_on:
+      - database
+
+  database:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - database_data:/var/lib/postgresql/data:rw
+
+volumes:
+  caddy_data:
+  caddy_config:
+  database_data:

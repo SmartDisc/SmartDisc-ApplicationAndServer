@@ -74,6 +74,11 @@ CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
 FROM frankenphp_base AS frankenphp_prod_builder
 
 ENV APP_ENV=prod
+# Needed at build time only, to encrypt the JWT keypair generated below with
+# the same passphrase the app will use to decrypt it at runtime. Real value
+# is passed via `build.args` in compose.prod.yaml, sourced from the same
+# JWT_PASSPHRASE environment variable the container gets at runtime.
+ARG JWT_PASSPHRASE
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
@@ -97,6 +102,13 @@ RUN <<-EOF
 	cp .env.example .env
 	composer dump-autoload --classmap-authoritative --no-dev
 	composer dump-env prod
+	# Generate the JWT keypair now, as root, at build time. The prod container
+	# runs as a non-root user and may not be able to write to /app/config/jwt
+	# at all (arbitrary/managed runtimes, mounted volumes, etc.), so the
+	# keypair must already exist and be world-readable before that user ever
+	# starts the app. --overwrite is safe: this is a fresh build.
+	JWT_PASSPHRASE="${JWT_PASSPHRASE}" php bin/console lexik:jwt:generate-keypair --overwrite --no-interaction
+	chmod 644 config/jwt/private.pem config/jwt/public.pem
 	composer run-script --no-dev post-install-cmd
 	if [ -f importmap.php ]; then
 		php bin/console asset-map:compile
@@ -158,12 +170,9 @@ RUN <<-EOF
 EOF
 
 COPY --link --exclude=var --from=frankenphp_prod_builder /app /app
-# Group 0 + g=u for arbitrary-UID runtimes (e.g. OpenShift). config/jwt needs
-# the same treatment as var: the entrypoint generates the keypair into it at
-# container startup, as the non-root www-data user.
+# Group 0 + g=u for arbitrary-UID runtimes (e.g. OpenShift).
 COPY --chown=www-data:0 --from=frankenphp_prod_builder /app/var /app/var
-COPY --chown=www-data:0 --from=frankenphp_prod_builder /app/config/jwt /app/config/jwt
-RUN chmod g=u /app/var /app/config/jwt
+RUN chmod g=u /app/var
 
 COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 

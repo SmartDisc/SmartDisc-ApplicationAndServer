@@ -3,6 +3,11 @@ set -e
 
 if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 
+	# Symfony's Dotenv component requires this file to exist (even empty) to
+	# boot at all, regardless of whether config actually comes from real
+	# environment variables (which always take precedence over it anyway).
+	[ -f .env ] || touch .env
+
 	if [ -z "$(ls -A 'vendor/' 2>/dev/null)" ]; then
 		composer install --prefer-dist --no-progress --no-interaction
 	fi
@@ -16,7 +21,7 @@ if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 		php bin/console lexik:jwt:generate-keypair --skip-if-exists
 	fi
 
-	if grep -q ^DATABASE_URL= .env; then
+	if [ -n "${DATABASE_URL:-}" ]; then
 		echo 'Waiting for database to be ready...'
 		ATTEMPTS_LEFT_TO_REACH_DATABASE=60
 		until [ $ATTEMPTS_LEFT_TO_REACH_DATABASE -eq 0 ] || DATABASE_ERROR=$(php bin/console dbal:run-sql -q "SELECT 1" 2>&1); do

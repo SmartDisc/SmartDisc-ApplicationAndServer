@@ -1,13 +1,64 @@
 ---
-# Development stack: Symfony API + PostgreSQL (from SmartDisc-Server) only.
-#
-# Usage: docker compose up --build
+# Development stack: Symfony API + PostgreSQL. Works out of the box with no
+# .env file — `docker compose up --build` is enough. Override any value by
+# exporting it or putting it in a root-level .env file.
 #
 # SmartDisc-Application (the Vue frontend) is never run in Docker — it ships
 # as a native Capacitor app and is run locally with `npm run dev`, see the
-# README. Production is the same Symfony-only stack, see compose.prod.yaml.
-include:
-  - path: ./SmartDisc-Server/compose.yaml
-    env_file: ./SmartDisc-Server/.env
-  - path: ./SmartDisc-Server/compose.override.yaml
-    env_file: ./SmartDisc-Server/.env
+# README. Production is a separate, self-contained compose.prod.yaml.
+services:
+  php:
+    build:
+      context: ./SmartDisc-Server
+      target: frankenphp_dev
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      XDEBUG_MODE: ${XDEBUG_MODE:-develop}
+      FRANKENPHP_WORKER_CONFIG: watch
+      FRANKENPHP_SITE_CONFIG: hot_reload
+      MERCURE_EXTRA_DIRECTIVES: demo
+      SERVER_NAME: ":80"
+      DEFAULT_URI: "http://localhost:${HTTP_PORT:-8083}"
+      APP_SECRET: ${APP_SECRET:-devsecretdevsecretdevsecretdev1}
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8"
+      JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
+      JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-devjwtpassphrasedevjwtpassphrase}
+      CORS_ALLOW_ORIGIN: '^(capacitor|ionic)://localhost$|^https?://localhost(:[0-9]+)?$|^https?://127\.0\.0\.1(:[0-9]+)?$'
+      MERCURE_URL: "http://php/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "http://localhost:${HTTP_PORT:-8083}/.well-known/mercure"
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-devmercuresecretdevmercuresecret}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-devmercuresecretdevmercuresecret}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-devmercuresecretdevmercuresecret}
+    volumes:
+      - ./SmartDisc-Server:/app
+      # Keep var/ off the bind-mount for faster I/O on Mac/Windows; comment to inspect from the host.
+      - /app/var
+      - ./SmartDisc-Server/frankenphp/Caddyfile:/etc/frankenphp/Caddyfile:ro
+      - ./SmartDisc-Server/frankenphp/conf.d/20-app.dev.ini:/usr/local/etc/php/app.conf.d/20-app.dev.ini:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "${HTTP_PORT:-8083}:80"
+    extra_hosts:
+      # Ensure that host.docker.internal is correctly defined on Linux
+      - host.docker.internal:host-gateway
+    tty: true
+    depends_on:
+      - database
+
+  database:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+    volumes:
+      - database_data:/var/lib/postgresql/data:rw
+
+volumes:
+  caddy_data:
+  caddy_config:
+  database_data:
