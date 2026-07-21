@@ -1,27 +1,13 @@
 ---
-# Development stack: Symfony API + PostgreSQL (from SmartDisc-Server) plus the
-# Vite dev server for SmartDisc-Application.
+# Development stack: Symfony API + PostgreSQL (from SmartDisc-Server) only.
 #
 # Usage: docker compose up --build
 #
-# Production only starts the Symfony API + database, see compose.prod.yaml —
-# the Application ships as a native Capacitor app and isn't served here.
+# SmartDisc-Application (the Vue frontend) is never run in Docker — it ships
+# as a native Capacitor app and is run locally with `npm run dev`, see the
+# README. Production is the same Symfony-only stack, see compose.prod.yaml.
 include:
   - path: ./SmartDisc-Server/compose.yaml
     env_file: ./SmartDisc-Server/.env
   - path: ./SmartDisc-Server/compose.override.yaml
     env_file: ./SmartDisc-Server/.env
-
-services:
-  app:
-    build:
-      context: ./SmartDisc-Application
-    ports:
-      - "${APP_PORT:-5173}:5173"
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:${HTTP_PORT:-8083}}
-    volumes:
-      - ./SmartDisc-Application:/app
-      - /app/node_modules
-    depends_on:
-      - php
