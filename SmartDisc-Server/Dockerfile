@@ -87,7 +87,7 @@ RUN composer install --no-cache --prefer-dist --no-dev --no-autoloader --no-scri
 COPY --link --exclude=frankenphp/ . ./
 
 RUN <<-EOF
-	mkdir -p var/cache var/log var/share
+	mkdir -p var/cache var/log var/share config/jwt
 	# .env is excluded via .dockerignore (never bake host/dev secrets into the
 	# image); dump-env and the cache:clear below still need every %env(...)%
 	# referenced in config/packages/ to resolve to *something* to compile the
@@ -158,9 +158,12 @@ RUN <<-EOF
 EOF
 
 COPY --link --exclude=var --from=frankenphp_prod_builder /app /app
-# Group 0 + g=u for arbitrary-UID runtimes (e.g. OpenShift).
+# Group 0 + g=u for arbitrary-UID runtimes (e.g. OpenShift). config/jwt needs
+# the same treatment as var: the entrypoint generates the keypair into it at
+# container startup, as the non-root www-data user.
 COPY --chown=www-data:0 --from=frankenphp_prod_builder /app/var /app/var
-RUN chmod g=u /app/var
+COPY --chown=www-data:0 --from=frankenphp_prod_builder /app/config/jwt /app/config/jwt
+RUN chmod g=u /app/var /app/config/jwt
 
 COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 

@@ -6,3 +6,4 @@
 var
 vendor
 docs
+config/jwt/*.pem
