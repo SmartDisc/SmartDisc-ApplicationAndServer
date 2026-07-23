@@ -2,45 +2,44 @@
 
 Monorepo with two parts:
 
-- **SmartDisc-Application** — Vue 3 + Capacitor frontend (ships as a native iOS/Android app; served by Vite in dev only).
-- **SmartDisc-Server** — Symfony 8 API on FrankenPHP, with PostgreSQL.
+- **SmartDisc-Application** — Vue 3 + Capacitor frontend (ships as a native iOS/Android app). Always run locally with `npm`, never in Docker.
+- **SmartDisc-Server** — Symfony 8 API on FrankenPHP, with PostgreSQL. Always run in Docker.
 
 ## Prerequisites
 
-- Docker with the Compose plugin (`docker compose ...`, v2 syntax)
+- Docker with the Compose plugin (`docker compose ...`, v2 syntax) — for the API
+- Node.js (see `engines` in `SmartDisc-Application/package.json`) — for the frontend
 
-## First-time setup
+## Development
 
-Secrets and generated keys are gitignored on purpose and are **not** part of the repo, so a fresh clone needs a few manual steps before `docker compose up` works.
+There are exactly two Compose files in this repo: `compose.yaml` (dev) and `compose.prod.yaml` (production). No scripts, no `.env` files to create, no extra setup — both are self-contained and ship with safe dev defaults.
 
-1. Clone the repo.
+From the repo root:
 
-2. Create the server env file:
-   ```bash
-   cd SmartDisc-Server
-   cp .env.example .env
-   ```
-   Open `.env` and set real values for `APP_SECRET`, `POSTGRES_PASSWORD`, and `JWT_PASSPHRASE` (the example file ships with placeholders only). The root `compose.yaml` reads this file via `env_file: ./SmartDisc-Server/.env` — without it, `docker compose up` fails immediately.
+```bash
+docker compose up --build
+```
 
-3. From the repo root, build and start the stack:
-   ```bash
-   docker compose up --build
-   ```
+This builds and starts the Symfony API + PostgreSQL. First boot also runs the database migrations and generates a JWT keypair automatically. In a second terminal, start the frontend locally with npm (see [Frontend](#frontend) below).
 
-4. In a second terminal, generate the JWT keypair (needed once — the `php` container must already be running):
-   ```bash
-   docker compose exec php bin/console lexik:jwt:generate-keypair
-   ```
-   Use the same passphrase as `JWT_PASSPHRASE` in `SmartDisc-Server/.env`. This writes `config/jwt/private.pem` and `config/jwt/public.pem`, which are also gitignored.
+Once both are running:
 
-Once both steps are done:
+- App (Vite dev server, run via npm): http://localhost:5173
+- API (Caddy/FrankenPHP, run via Docker): http://localhost:8083
 
-- App (Vite dev server): http://localhost:5173
-- API (Caddy/FrankenPHP): http://localhost:8083
+Every value has a working default — override any of them by exporting env vars or dropping a root-level `.env` file before running `docker compose up`:
 
-Ports can be overridden with the `APP_PORT` / `HTTP_PORT` env vars (see `compose.yaml`).
+| Variable | Default |
+|---|---|
+| `HTTP_PORT` | `8083` |
+| `APP_SECRET` | dev placeholder |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `app` / `app` / `app` |
+| `JWT_PASSPHRASE` | dev placeholder |
+| `CADDY_MERCURE_JWT_SECRET` | dev placeholder |
 
-## Frontend without Docker (optional)
+## Frontend
+
+The Vue app is never run in Docker — always run it locally with npm:
 
 ```bash
 cd SmartDisc-Application
@@ -48,23 +47,35 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env` if you need to override `VITE_API_BASE_URL` (defaults to `http://localhost:8083`).
+Copy `.env.example` to `.env` if you need to override `VITE_API_BASE_URL` (defaults to `http://localhost:8083`, matching the Dockerized API's default `HTTP_PORT`).
 
 ## Production
 
-Run from the repo root:
+Same idea as dev, but `compose.prod.yaml` has no insecure defaults — it refuses to start with a clear error if a required variable is missing, instead of silently falling back to a placeholder.
+
+Required environment variables: `SERVER_NAME`, `APP_SECRET`, `POSTGRES_PASSWORD`, `CADDY_MERCURE_JWT_SECRET`, `JWT_PASSPHRASE`. Optional (have defaults): `POSTGRES_DB`, `POSTGRES_USER`, `HTTP_PORT`.
 
 ```bash
-docker compose -f compose.prod.yaml build --pull --no-cache
 SERVER_NAME=your-domain.example.com \
-APP_SECRET=ChangeMe \
-CADDY_MERCURE_JWT_SECRET=ChangeThisMercureHubJWTSecretKey \
-docker compose -f compose.prod.yaml up --wait
+APP_SECRET=$(openssl rand -hex 16) \
+POSTGRES_PASSWORD=$(openssl rand -hex 12) \
+CADDY_MERCURE_JWT_SECRET=$(openssl rand -hex 16) \
+JWT_PASSPHRASE=$(openssl rand -hex 16) \
+docker compose -f compose.prod.yaml up -d --build
 ```
 
-This also requires `SmartDisc-Server/.env` and a generated JWT keypair, same as the dev setup above. `SmartDisc-Application` is not served by this stack — it ships as a native Capacitor app.
+The JWT keypair is generated at **build time** (baked into the image, using `JWT_PASSPHRASE` as a build arg — see `SmartDisc-Server/Dockerfile`), not at container startup, so it works regardless of which user/UID actually runs the container. `SmartDisc-Application` is not served by this stack — it ships as a native Capacitor app.
+
+### Dokploy
+
+Works with the stock deploy command, no Custom Command override needed:
+
+- **Compose Path**: `compose.prod.yaml`
+- **Environment Variables**: set the five required variables listed above in Dokploy's UI
+
+That's it — `docker compose -f compose.prod.yaml up -d --build` (Dokploy's default) picks everything up automatically.
 
 ## Troubleshooting
 
-- **`docker compose up` fails right after cloning**: you're missing `SmartDisc-Server/.env` — see step 2.
-- **API returns 401s / JWT errors after setup**: the JWT keypair wasn't generated yet, or the passphrase doesn't match `JWT_PASSPHRASE` — see step 4.
+- **`docker compose -f compose.prod.yaml ...` fails immediately with `required variable X is missing a value`**: set that variable — see [Production](#production).
+- **API returns 401s / JWT errors**: `JWT_PASSPHRASE` at runtime doesn't match what was used to build the image — rebuild after changing it (`docker compose -f compose.prod.yaml up -d --build`).

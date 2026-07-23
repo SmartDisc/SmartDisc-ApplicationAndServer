@@ -73,6 +73,10 @@ export const useAuthStore = defineStore('auth', {
     isLoading: false,
     error: null,
     initialized: false,
+    // Set when an already-signed-in session gets a 401 'unauthenticated'
+    // mid-use (see api.js's onUnauthorized + App.vue). Distinct from a
+    // failed init() bootstrap, which clears the session silently instead.
+    sessionExpired: false,
   }),
 
   getters: {
@@ -146,6 +150,17 @@ export const useAuthStore = defineStore('auth', {
 
     async signOut() {
       await this._clearSession()
+    },
+
+    /** Marks the session dead after a mid-use 401 and drops the stored token. */
+    async flagSessionExpired() {
+      this.sessionExpired = true
+      await this._clearSession()
+    },
+
+    /** Called once the user has followed the session-expired popup to sign-in. */
+    clearSessionExpired() {
+      this.sessionExpired = false
     },
 
     async changePassword(currentPassword, newPassword) {

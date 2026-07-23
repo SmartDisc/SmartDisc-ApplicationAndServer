@@ -1,34 +1,43 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import AppLayout from '@/layouts/AppLayout.vue'
 import SdAppBar from '@/components/ui/SdAppBar.vue'
 import SdStatTile from '@/components/ui/SdStatTile.vue'
-import { SdBtn } from '@/components/ui'
+import { SdBtn, SdChip } from '@/components/ui'
 import { MoreHorizontal, Star, Share2 } from 'lucide-vue-next'
 import { useDiscs } from '@/composables/useDiscs'
-import { usePreferences } from '@/composables/usePreferences'
+import { useThrows, formatThrowTime } from '@/composables/useThrows'
 import { useI18n } from '@/i18n'
-import { convertSpeed, speedUnitLabel, convertDistance, distanceUnitLabel, formatDistance } from '@/utils/units'
 
 const route = useRoute()
 const { getDisc } = useDiscs()
-const { speedUnit, distanceUnit } = usePreferences()
+const { getThrows, fetchThrows, toggleThrowFavorite } = useThrows()
 const { t } = useI18n()
-const disc  = computed(() => getDisc(route.params.id))
+
+const disc = computed(() => getDisc(route.params.id))
 const throw_ = computed(() =>
-  disc.value?.throws_list.find(th => String(th.id) === String(route.params.throwId)) ?? null
+  getThrows(route.params.id).find(th => String(th.id) === String(route.params.throwId)) ?? null
 )
 
-// Mock flight stats — base values are km/h / meters.
-const speed    = computed(() => convertSpeed(throw_.value?.speedKmh ?? 27, speedUnit.value))
-const speedU   = computed(() => speedUnitLabel(speedUnit.value))
-const height   = computed(() => convertDistance(3.8, distanceUnit.value))
-const heightU  = computed(() => distanceUnitLabel(distanceUnit.value))
-const distance = computed(() => convertDistance(41, distanceUnit.value))
-const distanceU = computed(() => distanceUnitLabel(distanceUnit.value))
-const catchLabel = computed(() => formatDistance(41, distanceUnit.value))
-const throwDay = computed(() => throw_.value ? t(`discs.days.${throw_.value.day}`) : t('discs.days.today'))
+onMounted(() => {
+  // Covers direct navigation to this view before the throws list was fetched.
+  fetchThrows(route.params.id).catch(() => {
+    // throw_ just stays null if this fails; template falls back to placeholders
+  })
+})
+
+const throwTime   = computed(() => (throw_.value ? formatThrowTime(t, throw_.value) : ''))
+const durationS   = computed(() => (throw_.value ? `${(throw_.value.durationMs / 1000).toFixed(1)}s` : '—'))
+const maxAlt      = computed(() => (throw_.value?.maxAltM != null ? `${throw_.value.maxAltM.toFixed(2)}m` : '—'))
+const avgTemp     = computed(() => (throw_.value?.avgTempC != null ? `${throw_.value.avgTempC.toFixed(1)}°C` : '—'))
+const recordedAt  = computed(() => (throw_.value?.recordedAt ? new Date(throw_.value.recordedAt).toLocaleString() : '—'))
+
+function onToggleFav() {
+  if (!throw_.value) return
+  toggleThrowFavorite(route.params.id, throw_.value.id, !throw_.value.fav).catch(() => {
+    // best-effort — star just won't flip if this fails
+  })
+}
 </script>
 
 <template>
@@ -49,46 +58,44 @@ const throwDay = computed(() => throw_.value ? t(`discs.days.${throw_.value.day}
 
       <div class="throw-header">
         <div class="throw-eyebrow">{{ t('discs.throwDetail.throwOf', { name: disc?.name ?? '' }) }}</div>
-        <h1 class="throw-title">{{ throw_?.name ?? t('discs.throwDetail.defaultName') }}</h1>
-        <p class="throw-time">{{ throwDay }}</p>
+        <h1 class="throw-title">
+          {{ throw_?.name ?? t('discs.throwDetail.defaultName') }}
+          <SdChip v-if="throw_?.auto" tone="gold" class="throw-title__badge">
+            {{ t('discs.throwDetail.autoNamed') }}
+          </SdChip>
+        </h1>
+        <p class="throw-time">{{ throwTime }}</p>
       </div>
 
       <!-- Primary stats -->
       <div class="stat-row">
-        <SdStatTile dark :v="throw_?.rpm ?? 1320" :k="t('discs.throwDetail.rpm')" />
-        <SdStatTile dark :v="speed" :u="speedU" :k="t('discs.throwDetail.speed')" />
-        <SdStatTile dark :v="height" :u="heightU" :k="t('discs.throwDetail.height')" />
-      </div>
-
-      <!-- Flight path visualization -->
-      <div class="flight">
-        <svg width="100%" height="100%" viewBox="0 0 340 220" preserveAspectRatio="none" class="flight__svg">
-          <defs>
-            <linearGradient id="trail" x1="0" x2="1">
-              <stop offset="0%" stop-color="#dec38c" />
-              <stop offset="100%" stop-color="#6f93b5" />
-            </linearGradient>
-          </defs>
-          <path d="M20 190 C90 30, 220 30, 320 130" stroke="url(#trail)" stroke-width="3" fill="none" stroke-linecap="round" />
-          <path d="M20 190 C90 30, 220 30, 320 130" stroke="rgba(255,255,255,.15)" stroke-width="14" fill="none" stroke-linecap="round" opacity=".4" />
-          <circle cx="20" cy="190" r="6" fill="#dec38c" />
-          <circle cx="320" cy="130" r="6" fill="#fff" />
-        </svg>
-        <span class="flight__lbl flight__lbl--start">{{ t('discs.throwDetail.release') }}</span>
-        <span class="flight__lbl flight__lbl--end">{{ t('discs.throwDetail.catch', { distance: catchLabel }) }}</span>
+        <SdStatTile dark :v="throw_?.rpm ?? '—'" :k="t('discs.throwDetail.rpm')" />
+        <SdStatTile dark :v="durationS" :k="t('discs.throwDetail.duration')" />
+        <SdStatTile dark :v="maxAlt" :k="t('discs.throwDetail.maxAltitude')" />
       </div>
 
       <!-- Secondary stats -->
       <div class="stat-row">
-        <SdStatTile dark v="3.1" u="s" :k="t('discs.throwDetail.hangTime')" />
-        <SdStatTile dark v="18°" :k="t('discs.throwDetail.launch')" />
-        <SdStatTile dark :v="distance" :u="distanceU" :k="t('discs.throwDetail.distance')" />
+        <SdStatTile dark :v="avgTemp" :k="t('discs.throwDetail.avgTemp')" />
+        <SdStatTile dark :v="recordedAt" :k="t('discs.throwDetail.recordedAt')" />
+      </div>
+
+      <div class="throw-meta">
+        <span v-if="throw_?.recordedByName">{{ t('discs.throwDetail.recordedBy', { name: throw_.recordedByName }) }}</span>
+        <span v-if="throw_?.sampleCount != null">{{ t('discs.throwDetail.sampleCount', { count: throw_.sampleCount }) }}</span>
       </div>
 
       <!-- Actions -->
       <div class="throw-actions">
-        <SdBtn variant="dark-glass" size="md">
-          <template #icon-left><Star :size="16" :stroke-width="1.75" /></template>
+        <SdBtn variant="dark-glass" size="md" @click="onToggleFav">
+          <template #icon-left>
+            <Star
+              :size="16"
+              :stroke-width="1.75"
+              :fill="throw_?.fav ? 'var(--sd-gold-300)' : 'none'"
+              :style="{ color: throw_?.fav ? 'var(--sd-gold-300)' : undefined }"
+            />
+          </template>
           {{ t('discs.throwDetail.favorite') }}
         </SdBtn>
         <SdBtn variant="gold" size="md" block>
@@ -184,6 +191,14 @@ const throwDay = computed(() => throw_.value ? t(`discs.days.${throw_.value.day}
   color: #fff;
   margin: 0 0 4px;
   line-height: 1.05;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.throw-title__badge {
+  font-size: 10px;
+  vertical-align: middle;
 }
 .throw-time {
   font-family: var(--sd-font-body);
@@ -198,34 +213,15 @@ const throwDay = computed(() => throw_.value ? t(`discs.days.${throw_.value.day}
   margin-bottom: 14px;
 }
 
-.flight {
-  flex: 1;
-  position: relative;
-  min-height: 160px;
-  border-radius: var(--sd-r-md);
-  border: 1px solid rgba(255, 255, 255, .08);
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 32px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 26px),
-    rgba(255, 255, 255, .04);
-  overflow: hidden;
-  margin-bottom: 14px;
+.throw-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--sd-font-body);
+  font-size: 12px;
+  color: var(--sd-fg2-on-dark);
+  margin: 0 0 18px;
 }
-.flight__svg { position: absolute; inset: 0; }
-
-.flight__lbl {
-  position: absolute;
-  font-family: var(--sd-font-display);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: rgba(255, 255, 255, .85);
-  color: var(--sd-ink);
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-.flight__lbl--start { left: 12px; bottom: 12px; background: rgba(222, 195, 140, .95); }
-.flight__lbl--end   { right: 12px; top: 12px; }
 
 .throw-actions {
   display: flex;

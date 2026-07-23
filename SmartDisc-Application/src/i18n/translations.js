@@ -144,6 +144,11 @@ const en = {
     invalid_credentials: 'Invalid credentials.',
     unauthenticated: 'Your session has expired. Please sign in again.',
   },
+  sessionExpired: {
+    title: 'Session expired',
+    body: 'Your session has expired. Please sign in again to continue.',
+    cta: 'Go to sign in',
+  },
   passwordHint: {
     title: 'Password requirements',
   },
@@ -241,7 +246,13 @@ const en = {
     days: {
       today: 'Today',
       yesterday: 'Yesterday',
+      mon: 'Mon',
+      tue: 'Tue',
+      wed: 'Wed',
+      thu: 'Thu',
+      fri: 'Fri',
       sat: 'Sat',
+      sun: 'Sun',
     },
     lastActive: {
       activeMinAgo: 'Active {min} min ago',
@@ -277,6 +288,13 @@ const en = {
       distance: 'Distance',
       favorite: 'Favorite',
       share: 'Share',
+      duration: 'Duration',
+      maxAltitude: 'Max altitude',
+      avgTemp: 'Avg. temperature',
+      recordedAt: 'Recorded',
+      recordedBy: 'Recorded by {name}',
+      sampleCount: '{count} samples',
+      autoNamed: 'Auto-named',
     },
     people: {
       inviteLink: 'Invite link',
@@ -566,6 +584,11 @@ const de = {
     invalid_credentials: 'Ungültige Anmeldedaten.',
     unauthenticated: 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
   },
+  sessionExpired: {
+    title: 'Sitzung abgelaufen',
+    body: 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an, um fortzufahren.',
+    cta: 'Zur Anmeldung',
+  },
   passwordHint: {
     title: 'Passwortanforderungen',
   },
@@ -663,7 +686,13 @@ const de = {
     days: {
       today: 'Heute',
       yesterday: 'Gestern',
+      mon: 'Mo',
+      tue: 'Di',
+      wed: 'Mi',
+      thu: 'Do',
+      fri: 'Fr',
       sat: 'Sa',
+      sun: 'So',
     },
     lastActive: {
       activeMinAgo: 'Aktiv vor {min} Min.',
@@ -699,6 +728,13 @@ const de = {
       distance: 'Distanz',
       favorite: 'Favorit',
       share: 'Teilen',
+      duration: 'Dauer',
+      maxAltitude: 'Max. Höhe',
+      avgTemp: 'Ø Temperatur',
+      recordedAt: 'Aufgezeichnet',
+      recordedBy: 'Aufgezeichnet von {name}',
+      sampleCount: '{count} Messwerte',
+      autoNamed: 'Automatisch benannt',
     },
     people: {
       inviteLink: 'Einladungslink',

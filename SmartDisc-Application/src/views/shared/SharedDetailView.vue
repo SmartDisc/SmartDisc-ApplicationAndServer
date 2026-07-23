@@ -7,7 +7,8 @@ import SdAppBar from '@/components/ui/SdAppBar.vue'
 import SdStatTile from '@/components/ui/SdStatTile.vue'
 import SdThrowRow from '@/components/discs/SdThrowRow.vue'
 import { SdChip, SdCard, SdIconBtn, SdSectionLabel } from '@/components/ui'
-import { useDiscs, formatThrowTime } from '@/composables/useDiscs'
+import { useDiscs } from '@/composables/useDiscs'
+import { formatThrowTime } from '@/composables/useThrows'
 import { usePreferences } from '@/composables/usePreferences'
 import { useI18n } from '@/i18n'
 import { convertDistance, distanceUnitLabel } from '@/utils/units'
@@ -15,7 +16,7 @@ import { convertDistance, distanceUnitLabel } from '@/utils/units'
 const route  = useRoute()
 const router = useRouter()
 const { getSharedDisc } = useDiscs()
-const { speedUnit, distanceUnit } = usePreferences()
+const { distanceUnit } = usePreferences()
 const { t } = useI18n()
 const disc = computed(() => getSharedDisc(route.params.id))
 const longest = computed(() => convertDistance(disc.value?.longest ?? 0, distanceUnit.value))
@@ -57,7 +58,7 @@ const longestUnit = computed(() => distanceUnitLabel(distanceUnit.value))
         v-for="thr in disc?.throws_list ?? []"
         :key="thr.id"
         :name="thr.name"
-        :time="formatThrowTime(t, speedUnit, thr)"
+        :time="formatThrowTime(t, thr)"
         :rpm="thr.rpm"
         :fav="thr.fav"
         :auto="thr.auto"
