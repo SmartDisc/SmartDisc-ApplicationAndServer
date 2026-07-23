@@ -1,13 +1,11 @@
 import { ref, readonly } from 'vue'
-import { formatSpeed } from '@/utils/units'
 import { apiFetch } from '@/services/api'
 import { useAuthStore, mapAuthError } from '@/stores/auth'
 import { useI18n } from '@/i18n'
 
-// Throw `time` is stored as a day key + clock time + a base speed in km/h
-// (the app's canonical unit) rather than a baked-in formatted string, so
-// views can translate the day label and convert the speed to the user's
-// preferred unit at render time. See formatThrowTime()/formatLastActive().
+// Throw `time` is stored as a day key + clock time rather than a baked-in
+// formatted string, so views can translate the day label at render time.
+// See formatThrowTime() in useThrows.js / formatLastActive() below.
 //
 // Owned discs are paired by a real disc's UUID + password (see AddDiscView)
 // and fetched from the backend — there's no throw-logging feature yet, so
@@ -49,13 +47,6 @@ function mapSharedDisc(disc) {
     players: 1 + (disc.sharedCount ?? 0),
     throws_list: [],
   }
-}
-
-/** '{day} · {clock} · {speed}' — day label and speed follow the current language/unit. */
-export function formatThrowTime(t, speedUnit, throw_) {
-  const day = t(`discs.days.${throw_.day}`)
-  const speed = formatSpeed(throw_.speedKmh, speedUnit)
-  return `${day} · ${throw_.clock} · ${speed}`
 }
 
 /** Renders a disc's `lastActive` descriptor using the current language. */

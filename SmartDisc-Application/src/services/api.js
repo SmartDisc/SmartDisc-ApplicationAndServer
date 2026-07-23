@@ -10,10 +10,19 @@
  *   on `status` / `fieldErrors` instead of re-parsing bodies.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
-  || (import.meta.env.DEV ? 'http://localhost:8083' : '')
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const TIMEOUT_MS = 15000
+
+// Fired whenever a request comes back 401 with code 'unauthenticated' (an
+// expired/invalid token, as opposed to e.g. 'invalid_credentials' on a login
+// attempt). Callers across ~6 composables/stores all go through apiFetch, so
+// this is the one place that can notice a session died mid-use and let the
+// app react (see App.vue, which shows the session-expired popup).
+let unauthorizedHandler = null
+export function onUnauthorized(handler) {
+  unauthorizedHandler = handler
+}
 
 export class ApiError extends Error {
   constructor(message, { status = null, fieldErrors = null, retryAfter = null, code = null } = {}) {
@@ -77,6 +86,10 @@ export async function apiFetch(path, { method = 'GET', body, token, signal } = {
       ?? data?.error
       ?? (data?.errors && Object.values(data.errors)[0])
       ?? `Request failed (${response.status}).`
+
+    if (response.status === 401 && data?.code === 'unauthenticated') {
+      unauthorizedHandler?.()
+    }
 
     throw new ApiError(message, {
       status: response.status,

@@ -1,20 +1,24 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SdThrowRow from '@/components/discs/SdThrowRow.vue'
 import { SdChip } from '@/components/ui'
 import { Star, Calendar } from 'lucide-vue-next'
-import { useDiscs, formatThrowTime } from '@/composables/useDiscs'
-import { usePreferences } from '@/composables/usePreferences'
+import { useThrows, formatThrowTime } from '@/composables/useThrows'
 import { useI18n } from '@/i18n'
 
 const route  = useRoute()
 const router = useRouter()
-const { getDisc } = useDiscs()
-const { speedUnit } = usePreferences()
+const { getThrows, fetchThrows } = useThrows()
 const { t } = useI18n()
 
-const disc = computed(() => getDisc(route.params.id))
+const throws = computed(() => getThrows(route.params.id))
+
+onMounted(() => {
+  fetchThrows(route.params.id).catch(() => {
+    // throwsError already holds a friendly message if the caller needs it
+  })
+})
 </script>
 
 <template>
@@ -34,10 +38,10 @@ const disc = computed(() => getDisc(route.params.id))
 
     <div class="throws-list">
       <SdThrowRow
-        v-for="thr in disc?.throws_list ?? []"
+        v-for="thr in throws"
         :key="thr.id"
         :name="thr.name"
-        :time="formatThrowTime(t, speedUnit, thr)"
+        :time="formatThrowTime(t, thr)"
         :rpm="thr.rpm"
         :fav="thr.fav"
         :auto="thr.auto"
@@ -45,7 +49,7 @@ const disc = computed(() => getDisc(route.params.id))
       />
     </div>
 
-    <div v-if="!disc?.throws_list?.length" class="throws-empty">
+    <div v-if="!throws.length" class="throws-empty">
       {{ t('discs.throws.empty') }}
     </div>
   </div>

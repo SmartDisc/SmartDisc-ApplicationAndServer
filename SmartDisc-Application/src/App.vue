@@ -1,9 +1,32 @@
 <script setup>
-import { RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { onUnauthorized } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import SdSessionExpiredModal from '@/components/auth/SdSessionExpiredModal.vue'
+
+const route = useRoute()
+const authStore = useAuthStore()
+const { sessionExpired } = storeToRefs(authStore)
+
+// Only a 401 that kills an already-signed-in session should surface the
+// popup — a failed init() bootstrap (e.g. a stale token from a previous
+// install) clears itself silently and redirects to welcome instead.
+onUnauthorized(() => {
+  if (authStore.isAuthenticated) authStore.flagSessionExpired()
+})
+
+// Never show the popup on the pre-auth screens (sign-in, sign-up, welcome,
+// forgot-password, email-sent all set guestOnly; verify has none but is
+// equally pre-auth) — showing "your session expired, sign in again" there
+// makes no sense.
+const showSessionExpired = computed(() => sessionExpired.value && !route.meta.guestOnly && route.name !== 'verify')
 </script>
 
 <template>
   <RouterView />
+  <SdSessionExpiredModal v-if="showSessionExpired" />
 </template>
 
 <style>
